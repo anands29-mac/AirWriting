@@ -76,6 +76,10 @@ export default function App() {
     a.click()
   }
 
+  function distance(a, b){
+    return Math.sqrt((a.x - b.x)**2 + (a.y - b.y)**2 + (a.z - b.z)**2)
+  }
+
   function onResults(results) {
     // draw overlay landmarks
     const overlay = overlayRef.current
@@ -97,17 +101,20 @@ export default function App() {
       // threshold: if index fingertip is extended (simple heuristic: check distance to pip joint)
       const pip = landmarks[6]
       const isExtended = (landmarks[8].y < landmarks[6].y - 0.02) // finger up (screen coords)
+      const isPinched = (distance(landmarks[8], landmarks[4]) < 0.1) // finger pinched (screen coords)
+      console.log(distance(landmarks[8], landmarks[4]))
+      const isDown = isPinched
 
       // Draw small dot where tip is
       octx.fillStyle = 'rgba(255,0,0,0.8)'
       octx.beginPath(); octx.arc(x,y,6,0,Math.PI*2); octx.fill()
 
       // if extended, append to current stroke
-      if (isExtended) {
+      if (isDown) {
         // convert to canvas coords for stroke canvas
         const canvas = canvasRef.current
         const ctx = canvas.getContext('2d')
-        const cx = x
+        const cx = 720 - x  // Mirror
         const cy = y
         // simple drawing
         if (currentStroke.current.length === 0) {
