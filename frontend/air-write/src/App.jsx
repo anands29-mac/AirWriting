@@ -13,6 +13,8 @@ export default function App() {
   const currentStroke = useRef([])
   const cameraRef = useRef(null)
   const handsRef = useRef(null)
+  const emaPos = useRef({ x: 0, y: 0, z: 0 })
+
 
   useEffect(() => {
     // init MediaPipe Hands
@@ -95,13 +97,23 @@ export default function App() {
       // index fingertip is landmark 8
       const tip = landmarks[8]
       // tip.x, tip.y are normalized [0,1]
-      const x = tip.x * overlay.width
-      const y = tip.y * overlay.height
+      const rawX = tip.x * overlay.width
+      const rawY = tip.y * overlay.height
+      const rawZ = tip.z || 0
+      
+      // Simple EMA smoothing (α = 0.3)
+      const alpha = 0.2
+      emaPos.current.x = alpha * rawX + (1 - alpha) * emaPos.current.x
+      emaPos.current.y = alpha * rawY + (1 - alpha) * emaPos.current.y
+      emaPos.current.z = alpha * rawZ + (1 - alpha) * emaPos.current.z
+      
+      const x = emaPos.current.x
+      const y = emaPos.current.y
 
       // threshold: if index fingertip is extended (simple heuristic: check distance to pip joint)
       const pip = landmarks[6]
       const isExtended = (landmarks[8].y < landmarks[6].y - 0.02) // finger up (screen coords)
-      const isPinched = (distance(landmarks[8], landmarks[4]) < 0.1) // finger pinched (screen coords)
+      const isPinched = (distance(landmarks[8], landmarks[4]) < 0.08) // finger pinched (screen coords)
       console.log(distance(landmarks[8], landmarks[4]))
       const isDown = isPinched
 
