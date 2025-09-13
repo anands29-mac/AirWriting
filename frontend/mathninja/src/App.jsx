@@ -46,7 +46,10 @@ function GameScreen({
   score,
   lives,
   timeLeft,
-  onBackToMenu
+  onBackToMenu,
+  slashEffects,
+  showWebcam,
+  onToggleWebcam
 }) {
   return (
     <div className={`game-screen ${theme}`}>
@@ -63,8 +66,41 @@ function GameScreen({
       </div>
 
       <div className="game-layout">
-        {/* Left Panel - Math Problem */}
+        {/* Left Panel - Webcam Toggle & Math Problem */}
         <div className="problem-panel">
+          {/* Webcam Toggle Section */}
+          <div className="webcam-section">
+            <div className="webcam-toggle">
+              <label className="toggle-label">
+                <input
+                  type="checkbox"
+                  checked={showWebcam}
+                  onChange={onToggleWebcam}
+                  className="toggle-checkbox"
+                />
+                <span className="toggle-slider"></span>
+                📹 Show Webcam
+              </label>
+            </div>
+            
+            {showWebcam && (
+              <div className="webcam-container">
+                <video 
+                  ref={videoRef} 
+                  className="webcam-display"
+                  playsInline
+                  muted
+                />
+                <canvas 
+                  ref={overlayRef}
+                  className="webcam-overlay"
+                  width="200"
+                  height="150"
+                />
+              </div>
+            )}
+          </div>
+
           <h2>Solve This:</h2>
           <div className="math-problem">
             {currentProblem ? (
@@ -86,19 +122,48 @@ function GameScreen({
 
         {/* Game Area */}
         <div className="game-area">
-          {/* video must be present in DOM (but we hide it visually) */}
-          <video 
-            ref={videoRef} 
-            className="game-video"
-            playsInline
-            muted
-          />
+          {/* Background Image */}
+          <div className="game-background" style={{
+            backgroundImage: `url('../../download.jpg')`
+          }}></div>
+          
+          {/* Hidden video for hand tracking */}
+          {!showWebcam && (
+            <video 
+              ref={videoRef} 
+              className="game-video-hidden"
+              playsInline
+              muted
+            />
+          )}
+          
+          {/* Game canvas for hand tracking visualization */}
           <canvas 
             ref={overlayRef}
             className="game-canvas"
             width="800"
             height="600"
           />
+          
+          {/* Slash Effects */}
+          {slashEffects.map(slash => (
+            <div
+              key={slash.id}
+              className="slash-effect"
+              style={{
+                left: `${slash.x}px`,
+                top: `${slash.y}px`,
+              }}
+            >
+              <div 
+                className="slash-line"
+                style={{
+                  width: `${slash.width}px`,
+                  transform: `rotate(${slash.rotation}deg)`
+                }}
+              />
+            </div>
+          ))}
           
           {/* Falling Fruits */}
           <div className="fruits-container">
@@ -113,7 +178,24 @@ function GameScreen({
                 }}
                 onClick={() => onCutFruit(fruit.id)}
               >
+                {/* Fruit Image */}
+                <div 
+                  className="fruit-image"
+                  style={{
+                    backgroundImage: `url('../../${fruit.type}.png')`
+                  }}
+                ></div>
                 <span className="fruit-number">{fruit.number}</span>
+                
+                {/* Fruit pieces for breaking effect */}
+                {fruit.cut && (
+                  <>
+                    <div className="fruit-piece piece-1"></div>
+                    <div className="fruit-piece piece-2"></div>
+                    <div className="fruit-piece piece-3"></div>
+                    <div className="fruit-piece piece-4"></div>
+                  </>
+                )}
               </div>
             ))}
           </div>
@@ -193,6 +275,7 @@ export default function MathFruitNinja() {
   const [username, setUsername] = useState('');
   const [theme, setTheme] = useState('light');
   const [scores, setScores] = useState([]);
+  const [showWebcam, setShowWebcam] = useState(false);
 
   // Game mechanics
   const [gameState, setGameState] = useState({
@@ -205,6 +288,7 @@ export default function MathFruitNinja() {
   const [currentProblem, setCurrentProblem] = useState(null);
   const [gameTimer, setGameTimer] = useState(null);
   const [fruitSpawnTimer, setFruitSpawnTimer] = useState(null);
+  const [slashEffects, setSlashEffects] = useState([]);
 
   // Hand tracking
   const videoRef = useRef(null);
@@ -214,6 +298,7 @@ export default function MathFruitNinja() {
   const cameraRef = useRef(null);
   const handsRef = useRef(null);
   const emaPos = useRef({ x: 0, y: 0 });
+  const tracingPath = useRef([]);
 
   // Load MediaPipe scripts
   useEffect(() => {
@@ -252,43 +337,69 @@ export default function MathFruitNinja() {
 
   // Math problems generator
   const generateProblem = useCallback(() => {
-    const operations = ['+', '-', '*'];
+    const operations = ['+', '-', '*', '/', 'decimal', 'algebra'];
     const operation = operations[Math.floor(Math.random() * operations.length)];
-    let a, b, answer;
-    
+    let a, b, answer, question;
+
     switch (operation) {
       case '+':
         a = Math.floor(Math.random() * 50) + 1;
         b = Math.floor(Math.random() * 50) + 1;
         answer = a + b;
+        question = `${a} + ${b}`;
         break;
+
       case '-':
         a = Math.floor(Math.random() * 50) + 25;
-        b = Math.floor(Math.random() * a);
+        b = Math.floor(Math.random() * a); // ensure non-negative result
         answer = a - b;
+        question = `${a} - ${b}`;
         break;
+
       case '*':
         a = Math.floor(Math.random() * 12) + 1;
         b = Math.floor(Math.random() * 12) + 1;
         answer = a * b;
+        question = `${a} × ${b}`;
         break;
+
+      case '/':
+        b = Math.floor(Math.random() * 12) + 1; // divisor
+        answer = Math.floor(Math.random() * 12) + 1; // quotient
+        a = b * answer; // dividend = divisor × quotient
+        question = `${a} ÷ ${b}`;
+        break;
+
+      case 'decimal':
+        a = (Math.random() * 20).toFixed(1);
+        b = (Math.random() * 20).toFixed(1);
+        answer = (parseFloat(a) + parseFloat(b)).toFixed(1);
+        question = `${a} + ${b}`;
+        break;
+
+      case 'algebra':
+        // Form: x + b = c
+        b = Math.floor(Math.random() * 20) + 1;
+        answer = Math.floor(Math.random() * 20) + 1; // x value
+        a = answer + b; // result
+        question = `x + ${b} = ${a}`;
+        break;
+
       default:
         a = 5;
         b = 3;
         answer = 8;
+        question = `${a} + ${b}`;
     }
-    
-    return {
-      question: `${a} ${operation} ${b}`,
-      answer
-    };
+
+    return { question, answer };
   }, []);
 
   // Fruit generation
   const spawnFruit = useCallback(() => {
     if (!currentProblem) return;
     
-    const fruitTypes = ['apple', 'orange', 'banana', 'watermelon'];
+    const fruitTypes = ['Apple', 'Pomegranate', 'Pineapple', 'Watermelon'];
     const isCorrectAnswer = Math.random() < 0.3;
     
     let number;
@@ -352,7 +463,7 @@ export default function MathFruitNinja() {
       return;
     }
 
-    // create camera; don't gate frames by `running` here — we'll control start/stop via camera.start/stop
+    // create camera; don't gate frames by `running` here, control start/stop via camera.start/stop
     const camera = new window.Camera(videoEl, {
       onFrame: async () => {
         try {
@@ -361,8 +472,8 @@ export default function MathFruitNinja() {
           console.error('[MathFruitNinja] hands.send error', error);
         }
       },
-      width: 800,
-      height: 600,
+      width: showWebcam ? 200 : 800,
+      height: showWebcam ? 150 : 600,
     });
     cameraRef.current = camera;
 
@@ -378,8 +489,8 @@ export default function MathFruitNinja() {
         setRunning(true);
 
         // resize overlay canvas to match actual video resolution if possible
-        const vw = videoEl.videoWidth || 800;
-        const vh = videoEl.videoHeight || 600;
+        const vw = showWebcam ? 200 : (videoEl.videoWidth || 800);
+        const vh = showWebcam ? 150 : (videoEl.videoHeight || 600);
         if (overlay) {
           overlay.width = vw;
           overlay.height = vh;
@@ -411,34 +522,95 @@ export default function MathFruitNinja() {
       cameraRef.current = null;
       handsRef.current = null;
       setRunning(false);
+      tracingPath.current = [];
       console.info('[MathFruitNinja] Camera + Hands cleaned up');
     };
-  }, [handsLoaded, currentScreen]);
+  }, [handsLoaded, currentScreen, showWebcam]);
 
   // Hand tracking results
   function onResults(results) {
-    if (!overlayRef.current) return;
-    const overlay = overlayRef.current;
-    const ctx = overlay.getContext('2d');
-    ctx.clearRect(0, 0, overlay.width, overlay.height);
+    if (!results.multiHandLandmarks || results.multiHandLandmarks.length === 0) return;
+    const landmarks = results.multiHandLandmarks[0];
+    const tip = landmarks[8];
 
-    if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
-      const landmarks = results.multiHandLandmarks[0];
-      const tip = landmarks[8];
-      
-      // normalized coords -> canvas coords
-      const x = tip.x * overlay.width;
-      const y = tip.y * overlay.height;
-      
+    if (showWebcam) {
+      const overlay = document.querySelector('.webcam-overlay');
+      if (!overlay) return;
+      const ctx = overlay.getContext('2d');
+      ctx.clearRect(0, 0, overlay.width, overlay.height);
+
+      // Draw skeleton overlaying the webcam
+      drawHandSkeleton(ctx, landmarks, overlay.width, overlay.height);
+
+      // Convert tip coordinates to game area (800x600)
+      const rawX = (1 - tip.x) * 800;
+      const rawY = tip.y * 600;
+
+      // Apply smoothing (same as fullscreen mode)
       const alpha = 0.3;
-      emaPos.current.x = alpha * x + (1 - alpha) * emaPos.current.x;
-      emaPos.current.y = alpha * y + (1 - alpha) * emaPos.current.y;
+      emaPos.current.x = alpha * rawX + (1 - alpha) * emaPos.current.x;
+      emaPos.current.y = alpha * rawY + (1 - alpha) * emaPos.current.y;
 
+      // Use smoothed coordinates
+      checkFruitCollisions(emaPos.current.x, emaPos.current.y);
+      drawTrackingOnGameCanvas(emaPos.current.x, emaPos.current.y);
+    } else {
+      // Fullscreen mode → use the main game canvas
+      if (!overlayRef.current) return;
+      const ctx = overlayRef.current.getContext('2d');
+      ctx.clearRect(0, 0, overlayRef.current.width, overlayRef.current.height);
+
+      // Convert tip coordinates to match game canvas size
+      const gameX = (1 - tip.x) * overlayRef.current.width;
+      const gameY = tip.y * overlayRef.current.height;
+
+      // Smooth finger position
+      const alpha = 0.3;
+      emaPos.current.x = alpha * gameX + (1 - alpha) * emaPos.current.x;
+      emaPos.current.y = alpha * gameY + (1 - alpha) * emaPos.current.y;
+
+      // Add to tracing path
+      tracingPath.current.push({
+        x: emaPos.current.x,
+        y: emaPos.current.y,
+        timestamp: Date.now()
+      });
+
+      // Keep only the last 1 second of points
+      const now = Date.now();
+      tracingPath.current = tracingPath.current.filter(
+        point => now - point.timestamp < 1000
+      );
+
+      // Draw slash trail
+      if (tracingPath.current.length > 1) {
+        ctx.strokeStyle = '#FF6B6B';
+        ctx.lineWidth = 4;
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        ctx.globalAlpha = 0.8;
+
+        ctx.beginPath();
+        ctx.moveTo(tracingPath.current[0].x, tracingPath.current[0].y);
+
+        for (let i = 1; i < tracingPath.current.length; i++) {
+          const point = tracingPath.current[i];
+          const age = (now - point.timestamp) / 1000;
+          ctx.globalAlpha = Math.max(0.1, 0.8 - age);
+          ctx.lineTo(point.x, point.y);
+          ctx.stroke();
+          ctx.beginPath();
+          ctx.moveTo(point.x, point.y);
+        }
+      }
+
+      // Draw fingertip marker
+      ctx.globalAlpha = 1;
       ctx.fillStyle = '#FF6B6B';
       ctx.beginPath();
       ctx.arc(emaPos.current.x, emaPos.current.y, 15, 0, Math.PI * 2);
       ctx.fill();
-      
+
       ctx.strokeStyle = '#FF6B6B';
       ctx.lineWidth = 3;
       ctx.globalAlpha = 0.5;
@@ -447,9 +619,199 @@ export default function MathFruitNinja() {
       ctx.stroke();
       ctx.globalAlpha = 1;
 
+      // Check fruit collisions
       checkFruitCollisions(emaPos.current.x, emaPos.current.y);
     }
   }
+
+
+  // Draw tracking elements on the main game canvas when webcam is shown
+  function drawTrackingOnGameCanvas(gameX, gameY) {
+    // Find the main game canvas (we need to create a separate canvas overlay for the main game area)
+    const gameArea = document.querySelector('.game-area');
+    if (!gameArea) return;
+    
+    let mainCanvas = gameArea.querySelector('.main-tracking-canvas');
+    if (!mainCanvas) {
+      mainCanvas = document.createElement('canvas');
+      mainCanvas.className = 'main-tracking-canvas';
+      mainCanvas.width = 800;
+      mainCanvas.height = 600;
+      mainCanvas.style.position = 'absolute';
+      mainCanvas.style.top = '0';
+      mainCanvas.style.left = '0';
+      mainCanvas.style.pointerEvents = 'none';
+      mainCanvas.style.zIndex = '15';
+      gameArea.appendChild(mainCanvas);
+    }
+    
+    const ctx = mainCanvas.getContext('2d');
+    ctx.clearRect(0, 0, mainCanvas.width, mainCanvas.height);
+    
+    // Add current position to tracing path
+    tracingPath.current.push({ 
+      x: gameX, 
+      y: gameY, 
+      timestamp: Date.now() 
+    });
+    
+    // Keep only recent points (last 1 second)
+    const now = Date.now();
+    tracingPath.current = tracingPath.current.filter(point => now - point.timestamp < 1000);
+
+    // Draw tracing line
+    if (tracingPath.current.length > 1) {
+      ctx.strokeStyle = '#FF6B6B';
+      ctx.lineWidth = 4;
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      ctx.globalAlpha = 0.8;
+      
+      ctx.beginPath();
+      ctx.moveTo(tracingPath.current[0].x, tracingPath.current[0].y);
+      
+      for (let i = 1; i < tracingPath.current.length; i++) {
+        const point = tracingPath.current[i];
+        // Fade older points
+        const age = (now - point.timestamp) / 1000;
+        ctx.globalAlpha = Math.max(0.1, 0.8 - age);
+        ctx.lineTo(point.x, point.y);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(point.x, point.y);
+      }
+    }
+
+    // Draw current finger position
+    ctx.globalAlpha = 1;
+    ctx.fillStyle = '#FF6B6B';
+    ctx.beginPath();
+    ctx.arc(gameX, gameY, 15, 0, Math.PI * 2);
+    ctx.fill();
+    
+    ctx.strokeStyle = '#FF6B6B';
+    ctx.lineWidth = 3;
+    ctx.globalAlpha = 0.5;
+    ctx.beginPath();
+    ctx.arc(gameX, gameY, 25, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.globalAlpha = 1;
+  }
+
+  // Draw hand skeleton
+  function drawHandSkeleton(ctx, landmarks, width, height) {
+    ctx.save();
+    ctx.scale(-1, 1);            // flip horizontally
+    ctx.translate(-width, 0);    // shift back into view
+
+    const connections = [
+      [0, 1], [1, 2], [2, 3], [3, 4], // thumb
+      [0, 5], [5, 6], [6, 7], [7, 8], // index finger
+      [0, 9], [9, 10], [10, 11], [11, 12], // middle finger
+      [0, 13], [13, 14], [14, 15], [15, 16], // ring finger
+      [0, 17], [17, 18], [18, 19], [19, 20], // pinky
+      [5, 9], [9, 13], [13, 17] // palm connections
+    ];
+
+    // Draw connections (green)
+    ctx.strokeStyle = '#00FF00'; 
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    connections.forEach(([start, end]) => {
+      const s = landmarks[start];
+      const e = landmarks[end];
+      ctx.moveTo(s.x * width, s.y * height);
+      ctx.lineTo(e.x * width, e.y * height);
+    });
+    ctx.stroke();
+
+    // Draw landmarks (yellow)
+    ctx.fillStyle = '#FFFF00'; 
+    landmarks.forEach(lm => {
+      ctx.beginPath();
+      ctx.arc(lm.x * width, lm.y * height, 3, 0, Math.PI * 2);
+      ctx.fill();
+    });
+
+    ctx.restore();
+  }
+
+
+  // Create slash effect
+  const createSlashEffect = (x, y) => {
+    const slashId = Date.now() + Math.random();
+    const angle = Math.random() * 360;
+    const length = 80 + Math.random() * 40;
+    
+    const newSlash = {
+      id: slashId,
+      x: x - length / 2,
+      y: y - 2,
+      width: length,
+      rotation: angle
+    };
+    
+    setSlashEffects(prev => [...prev, newSlash]);
+    
+    // Create sparks
+    for (let i = 0; i < 6; i++) {
+      const sparkId = Date.now() + Math.random() + i;
+      const sparkAngle = (Math.random() * 360) * Math.PI / 180;
+      const sparkDistance = 30 + Math.random() * 30;
+      const sparkX = Math.cos(sparkAngle) * sparkDistance;
+      const sparkY = Math.sin(sparkAngle) * sparkDistance;
+      
+      const spark = {
+        id: sparkId,
+        x: x - 3,
+        y: y - 3,
+        sparkX,
+        sparkY
+      };
+      
+      setTimeout(() => {
+        const sparkElement = document.createElement('div');
+        sparkElement.className = 'slash-sparks';
+        sparkElement.style.left = spark.x + 'px';
+        sparkElement.style.top = spark.y + 'px';
+        sparkElement.style.setProperty('--spark-x', spark.sparkX + 'px');
+        sparkElement.style.setProperty('--spark-y', spark.sparkY + 'px');
+        
+        const gameArea = document.querySelector('.game-area');
+        if (gameArea) {
+          gameArea.appendChild(sparkElement);
+          setTimeout(() => sparkElement.remove(), 400);
+        }
+      }, 50);
+    }
+    
+    // Remove slash effect after animation
+    setTimeout(() => {
+      setSlashEffects(prev => prev.filter(s => s.id !== slashId));
+    }, 300);
+  };
+
+  // Explosion effect when fruit is cut
+  const createFruitExplosion = (x, y) => {
+    for (let i = 0; i < 8; i++) {
+      const particle = document.createElement('div');
+      particle.className = 'fruit-explosion';
+      particle.style.left = `${x}px`;
+      particle.style.top = `${y}px`;
+      
+      const angle = Math.random() * 2 * Math.PI;
+      const distance = 50 + Math.random() * 50;
+      particle.style.setProperty('--dx', `${Math.cos(angle) * distance}px`);
+      particle.style.setProperty('--dy', `${Math.sin(angle) * distance}px`);
+      
+      const gameArea = document.querySelector('.game-area');
+      if (gameArea) {
+        gameArea.appendChild(particle);
+        setTimeout(() => particle.remove(), 600);
+      }
+    }
+  };
+
 
   // Check if hand position collides with fruits
   function checkFruitCollisions(handX, handY) {
@@ -465,6 +827,9 @@ export default function MathFruitNinja() {
         
         if (distance < 50) {
           hasChanges = true;
+          // Create slash effect at fruit position
+          createSlashEffect(fruit.x + 40, fruit.y + 40);
+          createFruitExplosion(fruit.x + 40, fruit.y + 40);
           return { ...fruit, cut: true };
         }
         return fruit;
@@ -583,10 +948,15 @@ export default function MathFruitNinja() {
       cameraRef.current.stop();
     }
     setRunning(false);
+    tracingPath.current = [];
   };
 
   const toggleTracking = () => {
     running ? stopTracking() : startTracking();
+  };
+
+  const toggleWebcam = () => {
+    setShowWebcam(prev => !prev);
   };
 
   // Game flow functions
@@ -605,6 +975,7 @@ export default function MathFruitNinja() {
     });
     setCurrentProblem(generateProblem());
     setCurrentScreen('game');
+    tracingPath.current = [];
   };
 
   const endGame = () => {
@@ -623,7 +994,12 @@ export default function MathFruitNinja() {
   };
 
   const cutFruit = (fruitId) => {
-    // Fallback for mouse/touch
+    // Fallback for mouse/touch - find the fruit and create slash effect at its position
+    const fruit = gameState.fruits.find(f => f.id === fruitId);
+    if (fruit) {
+      createSlashEffect(fruit.x + 40, fruit.y + 40);
+    }
+    
     const gameArea = document.querySelector('.game-area');
     if (gameArea) {
       const rect = gameArea.getBoundingClientRect();
@@ -663,6 +1039,9 @@ export default function MathFruitNinja() {
               setCurrentScreen('menu');
               stopTracking();
             }}
+            slashEffects={slashEffects}
+            showWebcam={showWebcam}
+            onToggleWebcam={toggleWebcam}
           />
         );
       case 'leaderboard':
@@ -865,6 +1244,81 @@ export default function MathFruitNinja() {
           justify-content: center;
         }
 
+        .webcam-section {
+          margin-bottom: 2rem;
+          width: 100%;
+        }
+
+        .webcam-toggle {
+          margin-bottom: 1rem;
+        }
+
+        .toggle-label {
+          display: flex;
+          align-items: center;
+          cursor: pointer;
+          font-size: 0.9rem;
+          gap: 0.5rem;
+        }
+
+        .toggle-checkbox {
+          display: none;
+        }
+
+        .toggle-slider {
+          width: 40px;
+          height: 20px;
+          background-color: rgba(255, 255, 255, 0.3);
+          border-radius: 10px;
+          position: relative;
+          transition: background-color 0.3s;
+        }
+
+        .toggle-slider::before {
+          content: '';
+          position: absolute;
+          width: 16px;
+          height: 16px;
+          border-radius: 50%;
+          background-color: white;
+          top: 2px;
+          left: 2px;
+          transition: transform 0.3s;
+        }
+
+        .toggle-checkbox:checked + .toggle-slider {
+          background-color: #4CAF50;
+        }
+
+        .toggle-checkbox:checked + .toggle-slider::before {
+          transform: translateX(20px);
+        }
+
+        .webcam-container {
+          position: relative;
+          width: 200px;
+          height: 150px;
+          border-radius: 10px;
+          overflow: hidden;
+          border: 2px solid rgba(255, 255, 255, 0.3);
+        }
+
+        .webcam-display {
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
+          transform: scaleX(-1);
+        }
+
+        .webcam-overlay {
+          position: absolute;
+          top: 0;
+          left: 0;
+          width: 100%;
+          height: 100%;
+          pointer-events: none;
+        }
+
         .math-problem {
           margin: 2rem 0;
           text-align: center;
@@ -883,6 +1337,23 @@ export default function MathFruitNinja() {
           text-align: center;
           margin-top: 2rem;
         }
+
+        .fruit-explosion {
+          position: absolute;
+          width: 10px;
+          height: 10px;
+          background: radial-gradient(circle, #fff200, #ff0000);
+          border-radius: 50%;
+          animation: explosionAnim 0.6s ease-out forwards;
+          pointer-events: none;
+          z-index: 20;
+        }
+
+        @keyframes explosionAnim {
+          0% { transform: translate(0, 0) scale(1); opacity: 1; }
+          100% { transform: translate(var(--dx), var(--dy)) scale(0.3); opacity: 0; }
+        }
+
 
         .tracking-btn {
           margin-top: 1rem;
@@ -914,12 +1385,25 @@ export default function MathFruitNinja() {
           overflow: hidden;
         }
 
-        .game-video {
+        .game-background {
+          position: absolute;
+          top: 0;
+          left: 0;
+          width: 100%;
+          height: 100%;
+          background-size: cover;
+          background-position: center;
+          background-repeat: no-repeat;
+          z-index: 0;
+        }
+
+        .game-video-hidden {
           opacity: 0;
           position: absolute;
           pointer-events: none;
-          width: 800px;
-          height: 600px;
+          width: 1px;
+          height: 1px;
+          top: -1000px;
         }
 
         .game-canvas {
@@ -937,13 +1421,13 @@ export default function MathFruitNinja() {
           width: 100%;
           height: 100%;
           pointer-events: none;
+          z-index: 5;
         }
 
         .fruit {
           position: absolute;
           width: 80px;
           height: 80px;
-          border-radius: 50%;
           display: flex;
           align-items: center;
           justify-content: center;
@@ -953,27 +1437,87 @@ export default function MathFruitNinja() {
           cursor: pointer;
           pointer-events: auto;
           transition: all 0.3s ease;
-          box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+          border-radius: 50%;
+          overflow: hidden;
         }
 
-        .fruit.apple {
-          background: radial-gradient(circle, #ff6b6b, #dc3545);
+        .fruit-image {
+          position: absolute;
+          top: 0;
+          left: 0;
+          width: 100%;
+          height: 100%;
+          background-size: cover;
+          background-position: center;
+          background-repeat: no-repeat;
+          border-radius: 50%;
+          z-index: 1;
         }
 
-        .fruit.orange {
-          background: radial-gradient(circle, #ffd93d, #fd7e14);
+        .fruit-number {
+          position: relative;
+          z-index: 2;
+          text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
+          background: rgba(0, 0, 0, 0.5);
+          padding: 0.2rem 0.5rem;
+          border-radius: 15px;
         }
 
-        .fruit.banana {
-          background: radial-gradient(circle, #ffeb3b, #fbc02d);
+        .fruit.apple .fruit-image {
+          background-color: #ff6b6b;
         }
 
-        .fruit.watermelon {
-          background: radial-gradient(circle, #4caf50, #2e7d32);
+        .fruit.orange .fruit-image {
+          background-color: #ffd93d;
+        }
+
+        .fruit.banana .fruit-image {
+          background-color: #ffeb3b;
+        }
+
+        .fruit.watermelon .fruit-image {
+          background-color: #4caf50;
         }
 
         .fruit.cut {
-          animation: cutAnimation 0.5s ease-out forwards;
+          animation: cutAnimation 0.8s ease-out forwards;
+        }
+
+        .fruit-piece {
+          position: absolute;
+          width: 40px;
+          height: 40px;
+          background: inherit;
+          border-radius: 20px;
+          opacity: 0;
+        }
+
+        .fruit.cut .fruit-piece {
+          animation: fruitBreakAnimation 0.8s ease-out forwards;
+        }
+
+        .fruit-piece.piece-1 {
+          top: -10px;
+          left: -10px;
+          animation-delay: 0s;
+        }
+
+        .fruit-piece.piece-2 {
+          top: -10px;
+          right: -10px;
+          animation-delay: 0.1s;
+        }
+
+        .fruit-piece.piece-3 {
+          bottom: -10px;
+          left: -10px;
+          animation-delay: 0.2s;
+        }
+
+        .fruit-piece.piece-4 {
+          bottom: -10px;
+          right: -10px;
+          animation-delay: 0.3s;
         }
 
         @keyframes cutAnimation {
@@ -982,8 +1526,8 @@ export default function MathFruitNinja() {
             opacity: 1;
           }
           50% {
-            transform: scale(1.3) rotate(180deg);
-            opacity: 0.7;
+            transform: scale(1.2) rotate(180deg);
+            opacity: 0.8;
           }
           100% {
             transform: scale(0) rotate(360deg);
@@ -991,8 +1535,65 @@ export default function MathFruitNinja() {
           }
         }
 
-        .fruit-number {
-          text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+        @keyframes fruitBreakAnimation {
+          0% {
+            opacity: 1;
+            transform: scale(1) translate(0, 0) rotate(0deg);
+          }
+          100% {
+            opacity: 0;
+            transform: scale(0.3) translate(var(--random-x, 50px), var(--random-y, 50px)) rotate(360deg);
+          }
+        }
+
+        .slash-effect {
+          position: absolute;
+          pointer-events: none;
+          z-index: 15;
+        }
+
+        .slash-line {
+          height: 4px;
+          background: linear-gradient(90deg, transparent, #FFD700, #FF6B6B, #FFD700, transparent);
+          border-radius: 2px;
+          animation: slashAnimation 0.3s ease-out forwards;
+          box-shadow: 0 0 10px #FFD700;
+        }
+
+        @keyframes slashAnimation {
+          0% {
+            opacity: 1;
+            transform: scaleX(0);
+          }
+          50% {
+            opacity: 1;
+            transform: scaleX(1);
+          }
+          100% {
+            opacity: 0;
+            transform: scaleX(1);
+          }
+        }
+
+        .slash-sparks {
+          position: absolute;
+          width: 6px;
+          height: 6px;
+          background: radial-gradient(circle, #FFD700, #FF6B6B);
+          border-radius: 50%;
+          animation: sparkAnimation 0.4s ease-out forwards;
+          box-shadow: 0 0 8px #FFD700;
+        }
+
+        @keyframes sparkAnimation {
+          0% {
+            opacity: 1;
+            transform: translate(0, 0) scale(1);
+          }
+          100% {
+            opacity: 0;
+            transform: translate(var(--spark-x), var(--spark-y)) scale(0);
+          }
         }
 
         .scores-list {
@@ -1044,9 +1645,20 @@ export default function MathFruitNinja() {
           
           .problem-panel {
             width: 100%;
-            height: 150px;
+            height: 200px;
             flex-direction: row;
             padding: 1rem;
+            justify-content: space-around;
+          }
+          
+          .webcam-section {
+            margin-bottom: 1rem;
+            margin-right: 1rem;
+          }
+          
+          .webcam-container {
+            width: 120px;
+            height: 90px;
           }
           
           .game-title {
@@ -1055,6 +1667,10 @@ export default function MathFruitNinja() {
           
           .menu-btn {
             min-width: 250px;
+          }
+          
+          .problem-text {
+            font-size: 2rem;
           }
         }
       `}</style>
