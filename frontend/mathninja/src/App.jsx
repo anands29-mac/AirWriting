@@ -404,13 +404,16 @@ export default function MathFruitNinja() {
     
     let number;
     if (isCorrectAnswer) {
-      number = currentProblem.answer;
+      number = Number(currentProblem.answer);
     } else {
-      const offset = Math.floor(Math.random() * 20) - 10;
-      number = Math.max(1, currentProblem.answer + offset);
-      if (number === currentProblem.answer) {
-        number += Math.random() > 0.5 ? 5 : -5;
-        number = Math.max(1, number);
+      const baseAnswer = Number(currentProblem.answer);
+      let offset = Math.floor(Math.random() * 20) - 10;
+      // Avoid offset 0 (which would duplicate the correct answer)
+      if (offset === 0) offset = 5;
+      number = Math.max(1, baseAnswer + offset);
+      // For decimals, round to 1 decimal place if needed
+      if (typeof currentProblem.answer === 'string' && currentProblem.answer.includes('.')) {
+        number = Number(number.toFixed(1));
       }
     }
     
@@ -812,6 +815,37 @@ export default function MathFruitNinja() {
     }
   };
 
+  // Fruit juice splash effect
+  const createJuiceSplash = (x, y, fruitType) => {
+    const colors = {
+      apple: '#ff4b4b',
+      orange: '#ffa500',
+      banana: '#ffe135',
+      watermelon: '#4caf50'
+    };
+
+    const splashColor = colors[fruitType] || '#FFD700';
+    const gameArea = document.querySelector('.game-area');
+    if (!gameArea) return;
+
+    for (let i = 0; i < 8; i++) {
+      const splash = document.createElement('div');
+      splash.className = 'juice-splash';
+      splash.style.left = `${x}px`;
+      splash.style.top = `${y}px`;
+      splash.style.background = splashColor;
+
+      // Random direction/size
+      const angle = Math.random() * 2 * Math.PI;
+      const distance = 60 + Math.random() * 40;
+      splash.style.setProperty('--dx', `${Math.cos(angle) * distance}px`);
+      splash.style.setProperty('--dy', `${Math.sin(angle) * distance}px`);
+      splash.style.setProperty('--scale', 1 + Math.random() * 0.5);
+
+      gameArea.appendChild(splash);
+      setTimeout(() => splash.remove(), 600);
+    }
+  };
 
   // Check if hand position collides with fruits
   function checkFruitCollisions(handX, handY) {
@@ -830,6 +864,7 @@ export default function MathFruitNinja() {
           // Create slash effect at fruit position
           createSlashEffect(fruit.x + 40, fruit.y + 40);
           createFruitExplosion(fruit.x + 40, fruit.y + 40);
+          createJuiceSplash(fruit.x + 40, fruit.y + 40, fruit.type);
           return { ...fruit, cut: true };
         }
         return fruit;
@@ -1637,6 +1672,23 @@ export default function MathFruitNinja() {
           min-width: 400px;
           max-width: 600px;
         }
+
+        .juice-splash {
+          position: absolute;
+          width: 20px;
+          height: 20px;
+          border-radius: 50%;
+          opacity: 0.7;
+          animation: splashAnim 0.6s ease-out forwards;
+          pointer-events: none;
+          z-index: 12;
+        }
+
+        @keyframes splashAnim {
+          0% { transform: translate(0,0) scale(1); opacity: 0.7; }
+          100% { transform: translate(var(--dx), var(--dy)) scale(var(--scale)); opacity: 0; }
+        }
+
 
         @media (max-width: 768px) {
           .game-layout {
