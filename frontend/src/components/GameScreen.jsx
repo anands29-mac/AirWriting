@@ -52,7 +52,7 @@ export default function GameScreen({
   const emaPos = useRef({ x: 0, y: 0 });
   const tracingPath = useRef([]);
 
-  // Enhanced fruit spawning with power-ups
+  // Enhanced fruit spawning with better difficulty-based speed scaling
   const spawnFruit = useCallback(() => {
     if (!currentProblem) return;
     
@@ -78,6 +78,23 @@ export default function GameScreen({
       }
     }
     
+    // Enhanced speed calculation based on difficulty
+    const getSpeedByDifficulty = () => {
+      const baseSpeed = 2;
+      const randomVariation = Math.random() * 2; // 0-2 additional speed
+      
+      switch (difficultyLevel) {
+        case 'Easy':
+          return baseSpeed + randomVariation +2; // 2-3 speed range
+        case 'Medium':
+          return baseSpeed + randomVariation+4; // 2-4 speed range
+        case 'Hard':
+          return baseSpeed + randomVariation + 10; // 4-6 speed range
+        default:
+          return baseSpeed + randomVariation;
+      }
+    };
+    
     const newFruit = {
       id: Date.now() + Math.random(),
       x: Math.random() * 600,
@@ -89,7 +106,7 @@ export default function GameScreen({
       powerType,
       cut: false,
       rotation: Math.random() * 360,
-      speed: 2 + Math.random() * 3 + (difficultyLevel === 'Hard' ? 2 : 0)
+      speed: getSpeedByDifficulty()
     };
 
     setGameState(prev => ({
@@ -765,7 +782,6 @@ const fallbackPlaySound = (soundType, volume = 0.5) => {
           ctx.moveTo(point.x, point.y);
         }
       }
-
       ctx.globalAlpha = 1;
       ctx.fillStyle = combo > 2 ? '#FFD700' : '#FF6B6B';
       ctx.beginPath();
@@ -1025,7 +1041,7 @@ const fallbackPlaySound = (soundType, volume = 0.5) => {
   useEffect(() => {
     const getSpawnRate = () => {
       const baseRate = 2000;
-      const difficultyMultiplier = difficultyLevel === 'Easy' ? 1.2 : difficultyLevel === 'Hard' ? 0.8 : 1;
+      const difficultyMultiplier = difficultyLevel === 'Easy' ? 1.0 : difficultyLevel === 'Hard' ? 0.5 : 2.0;
       const scoreMultiplier = Math.max(0.5, 1 - (gameState.score / 1000));
       return baseRate * difficultyMultiplier * scoreMultiplier;
     };
