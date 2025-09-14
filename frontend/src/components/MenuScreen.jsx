@@ -28,7 +28,6 @@ export default function MenuScreen({
           <h1 className="game-title">
             <span className="title-icon">🥷</span>
             <span className="title-text">Math Fruit Ninja</span>
-            <span className="title-3d">3D</span>
           </h1>
           <p className="welcome-text">Welcome back, <span className="username">{username}</span>!</p>
         </div>

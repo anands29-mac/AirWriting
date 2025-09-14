@@ -157,108 +157,113 @@ export default function SignIn({ onSuccess }) {
     }
   };
 
-  return (
-    <div className="container">
-      <div className="form-box">
-        <h1 id="title">{mode === "signup" ? "Sign Up" : "Sign In"}</h1>
-        
-        <form onSubmit={handleSubmit}>
-          <div className="input-group">
-            {mode === "signup" && (
+return (
+  <div className="container">
+    <div className="auth-layout">
+      {/* LEFT IMAGE */}
+      <div className="auth-image"></div>
+
+      {/* RIGHT FORM */}
+      <div className="auth-form">
+        <div className="form-box">
+          <h1 id="title">{mode === "signup" ? "Sign Up" : "Sign In"}</h1>
+          
+          <form onSubmit={handleSubmit}>
+            {/* Input fields */}
+            <div className="input-group">
+              {mode === "signup" && (
+                <div className="input-field">
+                  <FontAwesomeIcon icon={faUser} className="input-icon" />
+                  <input
+                    type="text"
+                    placeholder="Full Name"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    disabled={loading}
+                    required
+                  />
+                </div>
+              )}
+
               <div className="input-field">
-                <FontAwesomeIcon icon={faUser} className="input-icon" />
+                <FontAwesomeIcon icon={faEnvelope} className="input-icon" />
                 <input
-                  type="text"
-                  placeholder="Full Name"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
+                  type="email"
+                  placeholder="Email Address"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
                   disabled={loading}
                   required
                 />
               </div>
-            )}
 
-            <div className="input-field">
-              <FontAwesomeIcon icon={faEnvelope} className="input-icon" />
-              <input
-                type="email"
-                placeholder="Email Address"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                disabled={loading}
-                required
-              />
+              <div className="input-field password-field">
+                <FontAwesomeIcon icon={faLock} className="input-icon" />
+                <input
+                  type={showPassword ? "text" : "password"}
+                  placeholder="Password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  disabled={loading}
+                  required
+                  minLength="6"
+                />
+                <FontAwesomeIcon
+                  icon={showPassword ? faEyeSlash : faEye}
+                  className="password-toggle"
+                  onClick={togglePasswordVisibility}
+                  title={showPassword ? "Hide password" : "Show password"}
+                />
+              </div>
+
+              {mode === "signin" && (
+                <div className="forgot-password">
+                  <a href="#" onClick={(e) => e.preventDefault()}>
+                    Forgot Password?
+                  </a>
+                </div>
+              )}
+
+              {error && <div className="error-message">{error}</div>}
             </div>
 
-            <div className="input-field password-field">
-              <FontAwesomeIcon icon={faLock} className="input-icon" />
-              <input
-                type={showPassword ? "text" : "password"}
-                placeholder="Password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
+            <div className="btn-field">
+              <button
+                type="submit"
+                className={`primary-btn ${loading ? 'loading' : ''}`}
                 disabled={loading}
-                required
-                minLength="6"
-              />
-              <FontAwesomeIcon
-                icon={showPassword ? faEyeSlash : faEye}
-                className="password-toggle"
-                onClick={togglePasswordVisibility}
-                title={showPassword ? "Hide password" : "Show password"}
-              />
+              >
+                {loading ? 'Please wait...' : (mode === "signup" ? "Create Account" : "Sign In")}
+              </button>
             </div>
 
-            {mode === "signin" && (
-              <div className="forgot-password">
-                <a href="#" onClick={(e) => e.preventDefault()}>
-                  Forgot Password?
-                </a>
-              </div>
-            )}
-
-            {error && (
-              <div className="error-message">
-                {error}
-              </div>
-            )}
-          </div>
-
-          <div className="btn-field">
-            <button
-              type="submit"
-              className={`primary-btn ${loading ? 'loading' : ''}`}
-              disabled={loading}
-            >
-              {loading ? 'Please wait...' : (mode === "signup" ? "Create Account" : "Sign In")}
-            </button>
-          </div>
-
-          <div className="mode-toggle">
-            {mode === "signin" ? (
-              <p>
-                Don't have an account?{" "}
-                <span 
-                  className="toggle-link" 
-                  onClick={() => switchMode("signup")}
-                >
-                  Sign up here
-                </span>
-              </p>
-            ) : (
-              <p>
-                Already have an account?{" "}
-                <span 
-                  className="toggle-link" 
-                  onClick={() => switchMode("signin")}
-                >
-                  Sign in here
-                </span>
-              </p>
-            )}
-          </div>
-        </form>
+            <div className="mode-toggle">
+              {mode === "signin" ? (
+                <p>
+                  Don't have an account?{" "}
+                  <span 
+                    className="toggle-link" 
+                    onClick={() => switchMode("signup")}
+                  >
+                    Sign up here
+                  </span>
+                </p>
+              ) : (
+                <p>
+                  Already have an account?{" "}
+                  <span 
+                    className="toggle-link" 
+                    onClick={() => switchMode("signin")}
+                  >
+                    Sign in here
+                  </span>
+                </p>
+              )}
+            </div>
+          </form>
+        </div>
       </div>
     </div>
-  );
+  </div>
+);
 }

@@ -7,6 +7,45 @@ import AchievementsScreen from "./components/AchievementsScreen.jsx";
 import GameOverScreen from "./components/GameOverScreen.jsx";
 import './components/css/App.css';
 
+// Authentication utility functions
+const AUTH_STORAGE_KEY = 'mathNinjaAuth';
+
+const saveAuthData = (username, email = null) => {
+  const authData = {
+    username,
+    email,
+    timestamp: Date.now(),
+    isAuthenticated: true
+  };
+  localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(authData));
+};
+
+const getAuthData = () => {
+  try {
+    const stored = localStorage.getItem(AUTH_STORAGE_KEY);
+    if (!stored) return null;
+    
+    const authData = JSON.parse(stored);
+    
+    // Optional: Check if auth data is expired (e.g., after 30 days)
+    const THIRTY_DAYS = 30 * 24 * 60 * 60 * 1000;
+    if (Date.now() - authData.timestamp > THIRTY_DAYS) {
+      clearAuthData();
+      return null;
+    }
+    
+    return authData;
+  } catch (error) {
+    console.error('Error reading auth data:', error);
+    clearAuthData();
+    return null;
+  }
+};
+
+const clearAuthData = () => {
+  localStorage.removeItem(AUTH_STORAGE_KEY);
+};
+
 export default function MathFruitNinja() {
   // Authentication and user state
   const [currentScreen, setCurrentScreen] = useState('loading');
@@ -53,27 +92,99 @@ export default function MathFruitNinja() {
   const overlayRef = useRef(null);
   const [running, setRunning] = useState(false);
 
-  // Check authentication on mount
+  // Enhanced authentication check on mount
   useEffect(() => {
     const checkAuth = async () => {
-      // For now, skip authentication and go directly to menu
-      setCurrentScreen('signin');
+      console.log('🔐 Checking authentication status...');
+      
+      // First, check if user is already authenticated in localStorage
+      const savedAuth = getAuthData();
+      
+      if (savedAuth && savedAuth.isAuthenticated) {
+        console.log('✅ Found saved authentication:', savedAuth.username);
+        
+        // Restore authentication state
+        setUsername(savedAuth.username);
+        setIsAuthenticated(true);
+        setCurrentScreen('menu');
+        
+        // Optional: Verify with backend that user still exists
+        try {
+          const response = await fetch("http://127.0.0.1:5000/api/verify-user", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ 
+              username: savedAuth.username,
+              email: savedAuth.email 
+            })
+          });
+          
+          if (!response.ok) {
+            console.warn('⚠️ Backend verification failed, clearing auth');
+            handleLogout();
+            return;
+          }
+          
+          const data = await response.json();
+          if (!data.success) {
+            console.warn('⚠️ User no longer exists in backend, clearing auth');
+            handleLogout();
+            return;
+          }
+          
+          console.log('✅ Backend verification successful');
+        } catch (error) {
+          console.warn('⚠️ Backend verification failed (network error):', error.message);
+          // Don't log out on network errors - allow offline usage
+        }
+      } else {
+        console.log('❌ No saved authentication found');
+        setCurrentScreen('signin');
+      }
     };
     
     checkAuth();
   }, []);
 
   // Handle successful authentication
-  const handleSignInSuccess = (authenticatedUsername) => {
+  const handleSignInSuccess = (authenticatedUsername, email = null) => {
+    console.log('✅ Sign in successful:', authenticatedUsername);
+    
+    // Save authentication data to localStorage
+    saveAuthData(authenticatedUsername, email);
+    
+    // Update state
     setUsername(authenticatedUsername);
     setIsAuthenticated(true);
     setCurrentScreen('menu');
   };
 
-  // Handle logout
+  // Handle logout with cleanup
   const handleLogout = () => {
+    console.log('🚪 Logging out user:', username);
+    
+    // Clear localStorage
+    clearAuthData();
+    
+    // Reset state
     setUsername('');
     setIsAuthenticated(false);
+    
+    // Stop any running game
+    if (gameTimer) clearInterval(gameTimer);
+    if (fruitSpawnTimer) clearInterval(fruitSpawnTimer);
+    setRunning(false);
+    
+    // Reset game state
+    setGameState({
+      fruits: [],
+      score: 0,
+      lives: 3,
+      level: 1,
+      timeLeft: 60
+    });
+    
+    // Go back to sign in
     setCurrentScreen('signin');
   };
 
@@ -351,13 +462,14 @@ export default function MathFruitNinja() {
   
   const handleBackToMenu = () => setCurrentScreen('menu');
 
-  // Loading screen
+  // Loading screen with better UX
   if (currentScreen === 'loading') {
     return (
       <div className="loading-screen">
         <div className="loading-content">
           <h1>🥷 Math Fruit Ninja</h1>
           <div className="loading-spinner"></div>
+          <p>Checking authentication...</p>
         </div>
       </div>
     );
