@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
+import SignIn from "./components/SignIn.jsx";
 
 // Game Components
 function LoginScreen({ onLogin, theme }) {
@@ -271,11 +272,12 @@ function GameOverScreen({ score, onRestart, onBackToMenu, theme, isNewHighScore 
 // Main App Component
 export default function MathFruitNinja() {
   // Game state management
-  const [currentScreen, setCurrentScreen] = useState('login');
+  const [currentScreen, setCurrentScreen] = useState('signin');
   const [username, setUsername] = useState('');
   const [theme, setTheme] = useState('light');
   const [scores, setScores] = useState([]);
   const [showWebcam, setShowWebcam] = useState(false);
+
 
   // Game mechanics
   const [gameState, setGameState] = useState({
@@ -299,6 +301,12 @@ export default function MathFruitNinja() {
   const handsRef = useRef(null);
   const emaPos = useRef({ x: 0, y: 0 });
   const tracingPath = useRef([]);
+
+
+   const handleSignInSuccess = (name) => {
+    setUsername(name);
+    setCurrentScreen("login"); // after signin go to login/game flow
+  };
 
   // Load MediaPipe scripts
   useEffect(() => {
@@ -1102,9 +1110,13 @@ export default function MathFruitNinja() {
     }
   };
 
-  return (
+    return (
     <>
-      <style>{`
+      {currentScreen === "signin" ? (
+        <SignIn onSuccess={handleSignInSuccess} />
+      ) : (
+        <>
+ <style>{`
         .math-fruit-ninja {
           width: 100vw;
           height: 100vh;
@@ -1730,6 +1742,8 @@ export default function MathFruitNinja() {
       <div className={`math-fruit-ninja ${theme}`}>
         {renderCurrentScreen()}
       </div>
+        </>
+      )}
     </>
   );
 }
