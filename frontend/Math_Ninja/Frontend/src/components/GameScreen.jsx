@@ -52,12 +52,6 @@ export default function GameScreen({
   const emaPos = useRef({ x: 0, y: 0 });
   const tracingPath = useRef([]);
 
-  // Sound effects
-  const playSound = (soundType) => {
-    if (!soundEnabled) return;
-    console.log(`Playing sound: ${soundType}`);
-  };
-
   // Enhanced fruit spawning with power-ups
   const spawnFruit = useCallback(() => {
     if (!currentProblem) return;
@@ -196,9 +190,183 @@ export default function GameScreen({
     }
   };
 
-  // Enhanced collision detection with power-ups and combo system
+  // Web Audio Context and sound buffers
+const audioContextRef = useRef(null);
+const soundBuffersRef = useRef({});
+const [audioInitialized, setAudioInitialized] = useState(false);
+
+// Initialize Web Audio Context and load sounds
+useEffect(() => {
+  const initializeAudio = async () => {
+    try {
+      // Create AudioContext
+      audioContextRef.current = new (window.AudioContext || window.webkitAudioContext)();
+      
+      // Load sound files
+      const soundUrls = {
+        cut: 'https://www.soundjay.com/misc/sounds/bell-ringing-05.mp3', // Replace with your MP3 URL
+        powerup: 'https://www.soundjay.com/misc/sounds/magic-chime-02.mp3', // Replace with your MP3 URL
+        correct: 'https://www.soundjay.com/misc/sounds/success-2.mp3', // Replace with your MP3 URL
+        wrong: 'https://www.soundjay.com/misc/sounds/fail-buzzer-02.mp3', // Replace with your MP3 URL
+        achievement: 'https://www.soundjay.com/misc/sounds/achievement-2.mp3' // Replace with your MP3 URL
+      };
+
+      // Load each sound file
+      for (const [soundType, url] of Object.entries(soundUrls)) {
+        try {
+          const response = await fetch(url);
+          const arrayBuffer = await response.arrayBuffer();
+          const audioBuffer = await audioContextRef.current.decodeAudioData(arrayBuffer);
+          soundBuffersRef.current[soundType] = audioBuffer;
+          console.log(`Loaded sound: ${soundType}`);
+        } catch (error) {
+          console.warn(`Failed to load ${soundType} sound:`, error);
+          // Create a simple beep sound as fallback
+          soundBuffersRef.current[soundType] = createBeepSound(audioContextRef.current, soundType);
+        }
+      }
+      
+      setAudioInitialized(true);
+      console.log('Web Audio initialized successfully');
+    } catch (error) {
+      console.error('Failed to initialize Web Audio:', error);
+      // Fallback to HTML5 Audio
+      setAudioInitialized(false);
+    }
+  };
+
+  initializeAudio();
+
+  // Cleanup
+  return () => {
+    if (audioContextRef.current && audioContextRef.current.state !== 'closed') {
+      audioContextRef.current.close();
+    }
+  };
+}, []);
+
+// Create fallback beep sounds programmatically
+const createBeepSound = (audioContext, soundType) => {
+  const sampleRate = audioContext.sampleRate;
+  const duration = soundType === 'cut' ? 0.2 : 0.3;
+  const length = sampleRate * duration;
+  const buffer = audioContext.createBuffer(1, length, sampleRate);
+  const data = buffer.getChannelData(0);
+
+  // Different frequencies for different sound types
+  const frequencies = {
+    cut: [800, 600], // Two-tone slice sound
+    powerup: [523, 659, 784], // C-E-G chord
+    correct: [880, 1100], // Happy ascending tones
+    wrong: [220, 180], // Sad descending tones
+    achievement: [523, 659, 784, 988] // Victory chord
+  };
+
+  const freqs = frequencies[soundType] || [440];
+  
+  for (let i = 0; i < length; i++) {
+    let value = 0;
+    freqs.forEach((freq, index) => {
+      const time = i / sampleRate;
+      const fadeOut = 1 - (time / duration);
+      value += Math.sin(2 * Math.PI * freq * time) * fadeOut * (0.3 / freqs.length);
+    });
+    data[i] = value;
+  }
+
+  return buffer;
+};
+
+// Enhanced playSound function with Web Audio
+const playSound = (soundType, volume = 0.5) => {
+  if (!soundEnabled) return;
+  
+  if (audioInitialized && audioContextRef.current && soundBuffersRef.current[soundType]) {
+    try {
+      // Resume AudioContext if suspended (required by some browsers)
+      if (audioContextRef.current.state === 'suspended') {
+        audioContextRef.current.resume();
+      }
+
+      // Create source and gain nodes
+      const source = audioContextRef.current.createBufferSource();
+      const gainNode = audioContextRef.current.createGain();
+      
+      source.buffer = soundBuffersRef.current[soundType];
+      gainNode.gain.value = volume;
+      
+      // Connect nodes
+      source.connect(gainNode);
+      gainNode.connect(audioContextRef.current.destination);
+      
+      // Add some effects for different sound types
+      if (soundType === 'powerup') {
+        // Add reverb-like effect for powerups
+        const delay = audioContextRef.current.createDelay();
+        delay.delayTime.value = 0.1;
+        const feedback = audioContextRef.current.createGain();
+        feedback.gain.value = 0.3;
+        
+        source.connect(delay);
+        delay.connect(feedback);
+        feedback.connect(delay);
+        delay.connect(gainNode);
+      }
+      
+      // Play sound
+      source.start(0);
+      console.log(`Playing Web Audio sound: ${soundType}`);
+    } catch (error) {
+      console.error('Error playing Web Audio sound:', error);
+      fallbackPlaySound(soundType, volume);
+    }
+  } else {
+    fallbackPlaySound(soundType, volume);
+  }
+};
+
+// Fallback to HTML5 Audio if Web Audio fails
+const fallbackPlaySound = (soundType, volume = 0.5) => {
+  console.log(`Playing fallback sound: ${soundType}`);
+  
+  // Create simple audio beeps using oscillator (if available)
+  if (window.AudioContext || window.webkitAudioContext) {
+    try {
+      const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+      const oscillator = audioContext.createOscillator();
+      const gainNode = audioContext.createGain();
+      
+      oscillator.connect(gainNode);
+      gainNode.connect(audioContext.destination);
+      
+      // Different frequencies for different sounds
+      const frequencies = {
+        cut: 800,
+        powerup: 1200,
+        correct: 880,
+        wrong: 220,
+        achievement: 1000
+      };
+      
+      oscillator.frequency.value = frequencies[soundType] || 440;
+      oscillator.type = soundType === 'powerup' ? 'sawtooth' : 'sine';
+      
+      gainNode.gain.setValueAtTime(volume * 0.3, audioContext.currentTime);
+      gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3);
+      
+      oscillator.start(audioContext.currentTime);
+      oscillator.stop(audioContext.currentTime + 0.3);
+    } catch (error) {
+      console.warn('Fallback audio also failed:', error);
+    }
+  }
+};
+
+  //collision detection with power-ups and combo system
   function checkFruitCollisions(handX, handY) {
     setGameState(prev => {
+      console.log('🎯 Collision check - current lives:', prev.lives);
+      
       let hasChanges = false;
       const updatedFruits = prev.fruits.map(fruit => {
         if (fruit.cut) return fruit;
@@ -210,6 +378,7 @@ export default function GameScreen({
         
         if (distance < 50) {
           hasChanges = true;
+          playSound('cut', 0.7);
           createSlashEffect(fruit.x + 40, fruit.y + 40, fruit.isPowerUp ? 'powerup' : 'normal');
           createFruitExplosion(fruit.x + 40, fruit.y + 40);
           createJuiceSplash(fruit.x + 40, fruit.y + 40, fruit.type);
@@ -246,7 +415,11 @@ export default function GameScreen({
           setCorrectAnswers(prev => prev + 1);
           playSound('correct');
         } else {
-          newLives = Math.max(0, newLives - 1);
+          const hasShield = powerUps.some(p => p.name === 'Shield');
+          if (!hasShield) {
+            newLives = Math.max(0, newLives - 1);
+            console.log('💔 Lives decremented by collision:', prev.lives, '->', newLives);
+          }
           newCombo = 0;
           playSound('wrong');
         }
@@ -426,6 +599,11 @@ export default function GameScreen({
     if (cameraRef.current) return;
 
     console.info('[GameScreen] Initializing Hands + Camera');
+
+    if (!running && onToggleRunning) {
+      console.log('Auto-starting tracking after MediaPipe initialization');
+      setTimeout(() => onToggleRunning(), 100); // Small delay to ensure everything is ready
+    }
 
     const hands = new window.Hands({
       locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`
@@ -715,68 +893,133 @@ export default function GameScreen({
 
   // Game loop - enhanced with power-up effects
   useEffect(() => {
-    const gameLoop = setInterval(() => {
-      setGameState(prev => {
-        const hasSpeedBoost = powerUps.some(p => p.name === 'Speed Boost');
-        const speedMultiplier = hasSpeedBoost ? 0.5 : 1;
-        
-        const updatedFruits = prev.fruits
-          .map(fruit => ({
-            ...fruit,
-            y: fruit.y + (fruit.speed * speedMultiplier),
-            rotation: fruit.rotation + 2
-          }))
-          .filter(fruit => fruit.cut || fruit.y < 700);
-        
-        const missedFruits = prev.fruits.filter(fruit => 
-          fruit.y >= 700 && !fruit.cut && fruit.isCorrect
-        );
-        
-        let newLives = prev.lives;
-        const hasShield = powerUps.some(p => p.name === 'Shield');
-        
-        if (missedFruits.length > 0 && !hasShield) {
-          newLives = Math.max(0, prev.lives - missedFruits.length);
-          setCombo(0);
-        }
-        
-        return {
-          ...prev,
-          fruits: updatedFruits,
-          lives: newLives
-        };
-      });
-
-      setPowerUps(prev => 
-        prev.map(powerup => ({
-          ...powerup,
-          timeLeft: Math.max(0, powerup.timeLeft - 0.05)
-        })).filter(powerup => powerup.timeLeft > 0)
-      );
-    }, 50);
-
-    return () => clearInterval(gameLoop);
-  }, [powerUps, setGameState, setCombo, setPowerUps]);
-
-  // Game timer - fixed countdown
-useEffect(() => {
-  const timer = setInterval(() => {
+  if (!running || gameState.lives <= 0) {
+    console.log('🛑 Game loop NOT starting:', { running, lives: gameState.lives });
+    return;
+  }
+  
+  console.log('🔄 Game loop starting with lives:', gameState.lives);
+  
+  const gameLoop = setInterval(() => {
     setGameState(prev => {
-      if (prev.timeLeft > 1 && prev.lives > 0) {
-        // keep decrementing time
-        return { ...prev, timeLeft: prev.timeLeft - 1 };
-      } else {
-        // time runs out OR no lives left
+      console.log('🎮 Game loop tick - current lives:', prev.lives);
+      
+      const hasSpeedBoost = powerUps.some(p => p.name === 'Speed Boost');
+      const speedMultiplier = hasSpeedBoost ? 0.5 : 1;
+      
+      const updatedFruits = prev.fruits
+        .map(fruit => ({
+          ...fruit,
+          y: fruit.y + (fruit.speed * speedMultiplier),
+          rotation: fruit.rotation + 2
+        }))
+        .filter(fruit => fruit.cut || fruit.y < 700);
+      
+      const missedCorrectFruits = prev.fruits.filter(fruit => 
+        fruit.y >= 700 && !fruit.cut && fruit.isCorrect
+      );
+      
+      let newLives = prev.lives;
+      const hasShield = powerUps.some(p => p.name === 'Shield');
+      
+      if (missedCorrectFruits.length > 0) {
+        console.log('🍎 Missed fruits detected:', missedCorrectFruits.length);
+        if (!hasShield) {
+          newLives = Math.max(0, prev.lives - missedCorrectFruits.length);
+          console.log('💔 Lives decremented by game loop:', prev.lives, '->', newLives);
+        }
+        setCombo(0);
+      }
+      
+      if (newLives <= 0) {
+        console.log('☠️ Game loop - No lives left, ending game');
+        setTimeout(() => {
+          if (typeof endGame === 'function') {
+            endGame(prev.score, 0, prev.timeLeft);
+          }
+        }, 100);
+      }
+      
+      return {
+        ...prev,
+        fruits: updatedFruits,
+        lives: newLives
+      };
+    });
+
+    setPowerUps(prev => 
+      prev.map(powerup => ({
+        ...powerup,
+        timeLeft: Math.max(0, powerup.timeLeft - 0.05)
+      })).filter(powerup => powerup.timeLeft > 0)
+    );
+  }, 50);
+
+  return () => {
+    console.log('🧹 Game loop cleanup');
+    clearInterval(gameLoop);
+  };
+}, [running]);
+
+  useEffect(() => {
+    // Auto-start tracking when the component mounts
+    if (!running && onToggleRunning) {
+      console.log('Auto-starting tracking on game load');
+      onToggleRunning();
+    }
+  }, []);
+
+  // Game Timer
+  useEffect(() => {
+  console.log('Timer effect running:', { 
+    running, 
+    timeLeft: gameState.timeLeft, 
+    lives: gameState.lives
+  });
+  
+  if (!running || gameState.timeLeft <= 0 || gameState.lives <= 0) {
+    console.log('Timer conditions not met');
+    return;
+  }
+
+  console.log('Starting game timer...');
+  const timer = setInterval(() => {
+    console.log('Timer tick');
+    
+    setGameState(prev => {
+      const newTimeLeft = prev.timeLeft - 1;
+      console.log('Timer - Decrementing:', prev.timeLeft, '->', newTimeLeft);
+      
+      if (newTimeLeft <= 0 || prev.lives <= 0) {
+        console.log('Timer - Game ending condition met');
         clearInterval(timer);
-        endGame(prev.score, prev.lives, 0); // force timeLeft = 0
+        
+        setTimeout(() => {
+          if (typeof endGame === 'function') {
+            console.log('Timer - Calling endGame');
+            endGame(prev.score, prev.lives, 0);
+          }
+        }, 100);
+        
         return { ...prev, timeLeft: 0 };
       }
+      
+      return { 
+        ...prev, 
+        timeLeft: newTimeLeft 
+      };
     });
   }, 1000);
 
-  setGameTimer(timer);
-  return () => clearInterval(timer);
-}, [setGameState, setGameTimer, endGame]);
+  if (setGameTimer && typeof setGameTimer === 'function') {
+    setGameTimer(timer);
+  }
+  
+  return () => {
+    console.log('Timer effect cleanup');
+    clearInterval(timer);
+  };
+}, [running]);
 
   // Enhanced fruit spawning with difficulty scaling
   useEffect(() => {
@@ -816,8 +1059,8 @@ useEffect(() => {
       <div className="game-header">
         <div className="game-stats">
           <span className="stat">Score: {score}</span>
-          <span className="stat">Lives: {'❤️'.repeat(lives)}</span>
-          <span className="stat">Time: {timeLeft}s</span>
+          <span className="stat">Lives: {'❤️'.repeat(gameState.lives)}</span>
+          <span className="stat">Time: {gameState.timeLeft}s</span>
           <span className={`stat combo ${combo > 1 ? 'active' : ''}`}>
             Combo: {combo}x {combo > 1 && '🔥'}
           </span>

@@ -90,6 +90,15 @@ export default function MathFruitNinja() {
     }
   };
 
+  useEffect(() => {
+    console.log('🎯 GAMESTATE CHANGED:', {
+      lives: gameState.lives,
+      score: gameState.score,
+      timeLeft: gameState.timeLeft,
+      fruitsCount: gameState.fruits?.length || 0
+    });
+  }, [gameState]);
+
   // Submit score with proper state capture and retry logic
   const submitScore = async (finalScore, finalLives, finalTimeLeft, stats) => {
     console.log('submitScore called with:', {
@@ -239,36 +248,64 @@ export default function MathFruitNinja() {
 
   // Game flow functions
   const startGame = () => {
-    setGameState({
-      fruits: [],
-      score: 0,
-      lives: 3,
-      level: 1,
-      timeLeft: 60
-    });
-    setCurrentProblem(generateProblem());
-    setCurrentScreen('game');
+    console.log('Starting new game...');
+    
+    // Reset ALL game state first
+    setRunning(false); // Stop any existing tracking
+    
+    // Clear timers
+    if (gameTimer) {
+      clearInterval(gameTimer);
+      setGameTimer(null);
+    }
+    if (fruitSpawnTimer) {
+      clearInterval(fruitSpawnTimer);
+      setFruitSpawnTimer(null);
+    }
+    
+    // Reset all state variables
     setCombo(0);
     setMaxCombo(0);
     setPowerUps([]);
     setTotalFruitsAttempted(0);
     setCorrectAnswers(0);
     setPowerUpsUsed(0);
+    setSlashEffects([]);
     
     // Clear new achievement flags
     setAchievements(prev => prev.map(a => ({ ...a, isNew: false })));
+    
+    // Set initial game state
+    const initialGameState = {
+      fruits: [],
+      score: 0,
+      lives: 3,
+      level: 1,
+      timeLeft: 60
+    };
+    
+    console.log('Setting initial game state:', initialGameState);
+    setGameState(initialGameState);
+    
+    // Generate first problem
+    setCurrentProblem(generateProblem());
+    
+    // Switch to game screen LAST
+    setCurrentScreen('game');
   };
 
-  // Enhanced endGame with proper state capture and cleanup
+  // endGame with proper state capture and cleanup
   const endGame = useCallback((finalScore, finalLives, finalTimeLeft) => {
     console.log('endGame called with:', { finalScore, finalLives, finalTimeLeft });
     
     // Stop all timers immediately
     if (gameTimer) {
+      console.log('Clearing game timer');
       clearInterval(gameTimer);
       setGameTimer(null);
     }
     if (fruitSpawnTimer) {
+      console.log('Clearing fruit spawn timer');
       clearInterval(fruitSpawnTimer);
       setFruitSpawnTimer(null);
     }
@@ -289,13 +326,13 @@ export default function MathFruitNinja() {
     // Store final stats for display
     window.finalGameStats = finalStats;
     
-    // Submit score with captured values (don't block UI transition)
+    // Submit score (don't block UI transition)
     submitScore(finalScore, finalLives, finalTimeLeft, finalStats);
     
-    // Transition to game over screen immediately
+    // Transition to game over screen
     console.log('Transitioning to game over screen');
     setCurrentScreen('gameOver');
-  }, [gameTimer, fruitSpawnTimer, totalFruitsAttempted, correctAnswers, maxCombo, powerUpsUsed]);
+  }, [gameTimer, fruitSpawnTimer, totalFruitsAttempted, correctAnswers, maxCombo, powerUpsUsed, submitScore, difficultyLevel, username]);
 
   const cutFruit = (fruitId) => {
     // This will be handled in GameScreen component
