@@ -79,7 +79,7 @@ function GameScreen({
                   className="toggle-checkbox"
                 />
                 <span className="toggle-slider"></span>
-                📹 Show Webcam
+                Show Webcam
               </label>
             </div>
             
@@ -276,6 +276,7 @@ export default function MathFruitNinja() {
   const [theme, setTheme] = useState('light');
   const [scores, setScores] = useState([]);
   const [showWebcam, setShowWebcam] = useState(false);
+  const [flash, setFlash] = useState(null);
 
   // Game mechanics
   const [gameState, setGameState] = useState({
@@ -398,25 +399,58 @@ export default function MathFruitNinja() {
   // Fruit generation
   const spawnFruit = useCallback(() => {
     if (!currentProblem) return;
-    
+
     const fruitTypes = ['Apple', 'Pomegranate', 'Pineapple', 'Watermelon'];
     const isCorrectAnswer = Math.random() < 0.3;
-    
+
+    const baseAnswer = Number(currentProblem.answer);
+    const isDecimal = !Number.isInteger(baseAnswer);
+
     let number;
     if (isCorrectAnswer) {
-      number = Number(currentProblem.answer);
+      number = baseAnswer;
     } else {
-      const baseAnswer = Number(currentProblem.answer);
-      let offset = Math.floor(Math.random() * 20) - 10;
-      // Avoid offset 0 (which would duplicate the correct answer)
-      if (offset === 0) offset = 5;
-      number = Math.max(1, baseAnswer + offset);
-      // For decimals, round to 1 decimal place if needed
-      if (typeof currentProblem.answer === 'string' && currentProblem.answer.includes('.')) {
-        number = Number(number.toFixed(1));
-      }
+      // Generate a wrong candidate that is not equal to the correct answer.
+      let candidate;
+      let attempts = 0;
+      do {
+        attempts++;
+        // offset from -10..10 but avoid 0
+        let offset = Math.floor(Math.random() * 21) - 10;
+        if (offset === 0) offset = 5;
+
+        candidate = baseAnswer + offset;
+
+        // If candidate ended up < 1, try to make it reasonably positive instead of clamping to 1
+        if (candidate < 1) {
+          // push it positive so it doesn't collapse to the correct 1 when baseAnswer is small
+          candidate = baseAnswer + Math.abs(offset) + 1;
+        }
+
+        // round / format for decimals
+        if (isDecimal) {
+          candidate = Number(candidate.toFixed(1));
+        } else {
+          candidate = Math.round(candidate);
+        }
+
+        // safety break: avoid infinite loop
+        if (attempts > 12 && candidate === baseAnswer) {
+          candidate = isDecimal ? Number((baseAnswer + 1).toFixed(1)) : baseAnswer + 1;
+        }
+      } while (candidate === baseAnswer);
+
+      number = candidate;
     }
-    
+
+    // Randomize fruit speed: 60% normal (2-4), 40% fast (4-6)
+    let speed;
+    if (Math.random() < 0.4) {
+      speed = 4 + Math.random() * 2; // fast: 4-6
+    } else {
+      speed = 2 + Math.random() * 2; // normal: 2-4
+    }
+
     const newFruit = {
       id: Date.now() + Math.random(),
       x: Math.random() * 600,
@@ -426,7 +460,7 @@ export default function MathFruitNinja() {
       isCorrect: isCorrectAnswer,
       cut: false,
       rotation: Math.random() * 360,
-      speed: 2 + Math.random() * 3
+      speed
     };
 
     setGameState(prev => ({
@@ -434,6 +468,7 @@ export default function MathFruitNinja() {
       fruits: [...prev.fruits, newFruit]
     }));
   }, [currentProblem]);
+
 
   // Initialize MediaPipe AND auto-start camera when entering the game screen
   useEffect(() => {
@@ -884,8 +919,12 @@ export default function MathFruitNinja() {
         if (fruit.isCorrect) {
           newScore += 10;
           shouldGenerateNewProblem = true;
+          setFlash('positive');
+          setTimeout(() => setFlash(null), 300);
         } else {
           newLives = Math.max(0, newLives - 1);
+          setFlash('negative');
+          setTimeout(() => setFlash(null), 300);
         }
       });
       
@@ -960,7 +999,7 @@ export default function MathFruitNinja() {
     
     const spawnTimer = setInterval(() => {
       spawnFruit();
-    }, 2000);
+    }, 1200);
 
     setFruitSpawnTimer(spawnTimer);
     return () => clearInterval(spawnTimer);
@@ -1029,19 +1068,28 @@ export default function MathFruitNinja() {
   };
 
   const cutFruit = (fruitId) => {
-    // Fallback for mouse/touch - find the fruit and create slash effect at its position
+    // Find the fruit we clicked/tapped
     const fruit = gameState.fruits.find(f => f.id === fruitId);
     if (fruit) {
-      createSlashEffect(fruit.x + 40, fruit.y + 40);
+      const centerX = fruit.x + 40;
+      const centerY = fruit.y + 40;
+
+      // Show the slash & effects exactly at fruit center
+      createSlashEffect(centerX, centerY);
+
+      // Run the collision check at the fruit's center so the intended fruit is marked 'cut'
+      checkFruitCollisions(centerX, centerY);
+      return;
     }
-    
+
+    // fallback: if fruit couldn't be found, use center
     const gameArea = document.querySelector('.game-area');
     if (gameArea) {
       const rect = gameArea.getBoundingClientRect();
       checkFruitCollisions(rect.width / 2, rect.height / 2);
     }
   };
-
+  
   // Screen rendering
   const renderCurrentScreen = () => {
     switch (currentScreen) {
@@ -1110,16 +1158,28 @@ export default function MathFruitNinja() {
           height: 100vh;
           font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
           overflow: hidden;
+          background-image: url('../../Background.png');
+          background-size: cover;
+          background-position: center;
+          background-repeat: no-repeat;
         }
 
         .math-fruit-ninja.light {
           background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
           color: #333;
+          background-image: url('../../Background.png');
+          background-size: cover;
+          background-position: center;
+          background-repeat: no-repeat;
         }
 
         .math-fruit-ninja.dark {
           background: linear-gradient(135deg, #2d3748 0%, #1a202c 100%);
           color: #fff;
+          background-image: url('../../Background.png');
+          background-size: cover;
+          background-position: center;
+          background-repeat: no-repeat;
         }
 
         .login-screen, .menu-screen, .leaderboard-screen, .game-over-screen {
@@ -1148,7 +1208,7 @@ export default function MathFruitNinja() {
         .game-title {
           font-size: 3rem;
           margin-bottom: 0.5rem;
-          background: linear-gradient(45deg, #ff6b6b, #ffd93d, #6bcf7f, #4dabf7);
+          background: linear-gradient(45deg, #41e259ff, #3d8effff, #943dd1ff, #fd79ebff);
           -webkit-background-clip: text;
           -webkit-text-fill-color: transparent;
           background-clip: text;
@@ -1355,14 +1415,15 @@ export default function MathFruitNinja() {
         }
 
         .math-problem {
-          margin: 2rem 0;
+          margin: 2.5rem 0;
           text-align: center;
+          margin-top: -1rem;
         }
 
         .problem-text {
-          font-size: 3rem;
+          font-size: 2.5rem;
           font-weight: bold;
-          background: linear-gradient(45deg, #ff6b6b, #ffd93d);
+          background: linear-gradient(45deg, #6bff75ff, #3dc8ffff);
           -webkit-background-clip: text;
           -webkit-text-fill-color: transparent;
           background-clip: text;
@@ -1371,6 +1432,31 @@ export default function MathFruitNinja() {
         .instructions {
           text-align: center;
           margin-top: 2rem;
+          border-radius: 15px;
+          padding: 1.5rem;
+          border: 1px solid rgba(255, 255, 255, 0.12);
+          margin-top: -1.5rem;
+        }
+
+        .instructions p {
+          color: white;
+          margin-bottom: 1rem;
+        }
+
+        .toggle-label,
+        .problem-panel h2 {
+          color: #fff !important;
+        }
+        
+        .problem-panel h2 {
+          font-size: 2.5rem;
+        }
+
+        .game-header,
+        .game-header .stat,
+        .game-header .back-btn,
+        .game-header .game-stats span {
+          color: #fff !important;
         }
 
         .fruit-explosion {
@@ -1725,9 +1811,31 @@ export default function MathFruitNinja() {
             font-size: 2rem;
           }
         }
+
+        .screen-flash {
+          position: fixed;
+          top: 0; left: 0; width: 100vw; height: 100vh;
+          z-index: 1000;
+          pointer-events: none;
+          animation: flashAnim 0.3s;
+          opacity: 0.5;
+        }
+        .screen-flash.positive { background: #22c55e; }
+        .screen-flash.negative { background: #e11d48; }
+
+        @keyframes flashAnim {
+          0% { opacity: 0.7; }
+          100% { opacity: 0; }
+        }
       `}</style>
       
       <div className={`math-fruit-ninja ${theme}`}>
+        {flash === 'positive' && (
+          <div className="screen-flash positive"></div>
+        )}
+        {flash === 'negative' && (
+          <div className="screen-flash negative"></div>
+        )}
         {renderCurrentScreen()}
       </div>
     </>
