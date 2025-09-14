@@ -12,14 +12,6 @@ Currently, two official plugins are available:
 If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
 
 
-# AirWrite - Frontend Prototype
-
-## What this does
-A minimal React + MediaPipe prototype that:
-- Uses webcam and MediaPipe Hands to track the index fingertip.
-- Draws 'air-writing' strokes on an HTML canvas when the finger is extended.
-- Lets you export the strokes as a PNG ready to send to OCR/Math APIs.
-
 ## Setup (local)
 1. Create a project folder and paste the files in the structure above.
 2. Run:
