@@ -1,38 +1,108 @@
-.App {
-  text-align: center;
+/* Global Styles */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
 }
 
-.App-logo {
-  height: 40vmin;
-  pointer-events: none;
+.app {
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  transition: all 0.3s ease;
 }
 
-@media (prefers-reduced-motion: no-preference) {
-  .App-logo {
-    animation: App-logo-spin infinite 20s linear;
-  }
+.app.light {
+  background: #ffffff;
+  color: #1a1a1a;
 }
 
-.App-header {
-  background-color: #282c34;
-  min-height: 100vh;
+.app.dark {
+  background: #1a1a1a;
+  color: #ffffff;
+}
+
+/* Layout Styles */
+.app-layout {
+  display: flex;
+  height: calc(100vh - 60px);
+}
+
+.main-content {
+  flex: 1;
   display: flex;
   flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  font-size: calc(10px + 2vmin);
-  color: white;
+  position: relative;
+  overflow: hidden;
+  height: calc(100vh - 60px);
 }
 
-.App-link {
-  color: #61dafb;
+/* Scrollbar Styles for Dark Theme */
+.app.dark ::-webkit-scrollbar {
+  width: 8px;
 }
 
-@keyframes App-logo-spin {
-  from {
-    transform: rotate(0deg);
+.app.dark ::-webkit-scrollbar-track {
+  background: #2d2d2d;
+}
+
+.app.dark ::-webkit-scrollbar-thumb {
+  background: #555;
+  border-radius: 4px;
+}
+
+.app.dark ::-webkit-scrollbar-thumb:hover {
+  background: #666;
+}
+
+.app.light ::-webkit-scrollbar {
+  width: 8px;
+}
+
+.app.light ::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+
+.app.light ::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 4px;
+}
+
+.app.light ::-webkit-scrollbar-thumb:hover {
+  background: #a8a8a8;
+}
+
+/* Animation Classes */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.fade-in {
+  animation: fadeIn 0.3s ease-out;
+}
+
+/* Focus Styles */
+button:focus-visible {
+  outline: 2px solid #007AFF;
+  outline-offset: 2px;
+}
+
+/* Print Styles */
+@media print {
+  .navbar,
+  .sidebar,
+  .status-bar,
+  .webcam-container {
+    display: none !important;
   }
-  to {
-    transform: rotate(360deg);
+  
+  .main-content {
+    height: 100vh;
+  }
+  
+  .canvas-area {
+    padding: 0;
   }
 }
