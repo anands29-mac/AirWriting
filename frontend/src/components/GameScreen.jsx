@@ -1,5 +1,12 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import './css/GameScreen.css';
+import { 
+  AdaptiveDifficultySystem, 
+  GestureRecognition, 
+  AdvancedParticleSystem,
+  AdvancedAudioSystem,
+  AccessibilityFeatures 
+} from './EnhancedSystems.jsx';
 
 export default function GameScreen({ 
   videoRef, 
@@ -52,7 +59,14 @@ export default function GameScreen({
   const emaPos = useRef({ x: 0, y: 0 });
   const tracingPath = useRef([]);
 
-  // Enhanced fruit spawning with better difficulty-based speed scaling
+<<<<<<< Updated upstream:frontend/Math_Ninja/Frontend/src/components/GameScreen.jsx
+  // Sound effects
+  const playSound = (soundType) => {
+    if (!soundEnabled) return;
+    console.log(`Playing sound: ${soundType}`);
+  };
+
+  // Enhanced fruit spawning with power-ups
   const spawnFruit = useCallback(() => {
     if (!currentProblem) return;
     
@@ -76,25 +90,39 @@ export default function GameScreen({
       if (typeof currentProblem.answer === 'string' && currentProblem.answer.includes('.')) {
         number = Number(number.toFixed(1));
       }
+=======
+// Enhanced fruit spawning with better visual variety
+const spawnFruit = useCallback(() => {
+  if (!currentProblem) return;
+  
+  const fruitTypes = ['Apple', 'Pomegranate', 'Pineapple', 'Watermelon'];
+  const isPowerUp = Math.random() < 0.2;
+  const isCorrectAnswer = isPowerUp ? false : Math.random() < 0.5;
+  
+  let number, powerType = null;
+  
+  if (isPowerUp) {
+    const powerTypes = ['⚡', '💎', '🌟', '🛡️'];
+    powerType = powerTypes[Math.floor(Math.random() * powerTypes.length)];
+    number = powerType;
+  } else if (isCorrectAnswer) {
+    number = Number(currentProblem.answer);
+  } else {
+    const baseAnswer = Number(currentProblem.answer);
+    let offset = Math.floor(Math.random() * 20) - 10;
+    if (offset === 0) offset = 5;
+    number = Math.max(1, baseAnswer + offset);
+    if (typeof currentProblem.answer === 'string' && currentProblem.answer.includes('.')) {
+      number = Number(number.toFixed(1));
+>>>>>>> Stashed changes:frontend/src/components/GameScreen.jsx
     }
+  }
+  
+  const getSpeedByDifficulty = () => {
+    const baseSpeed = 6;
+    const randomVariation = Math.random() * 2;
     
-    // Enhanced speed calculation based on difficulty
-    const getSpeedByDifficulty = () => {
-      const baseSpeed = 2;
-      const randomVariation = Math.random() * 2; // 0-2 additional speed
-      
-      switch (difficultyLevel) {
-        case 'Easy':
-          return baseSpeed + randomVariation +2; // 2-3 speed range
-        case 'Medium':
-          return baseSpeed + randomVariation+4; // 2-4 speed range
-        case 'Hard':
-          return baseSpeed + randomVariation + 10; // 4-6 speed range
-        default:
-          return baseSpeed + randomVariation;
-      }
-    };
-    
+<<<<<<< Updated upstream:frontend/Math_Ninja/Frontend/src/components/GameScreen.jsx
     const newFruit = {
       id: Date.now() + Math.random(),
       x: Math.random() * 600,
@@ -106,14 +134,42 @@ export default function GameScreen({
       powerType,
       cut: false,
       rotation: Math.random() * 360,
-      speed: getSpeedByDifficulty()
+      speed: 2 + Math.random() * 3 + (difficultyLevel === 'Hard' ? 2 : 0)
     };
+=======
+    switch (difficultyLevel) {
+      case 'Easy':
+        return baseSpeed + randomVariation;
+      case 'Medium':
+        return baseSpeed + randomVariation + 2;
+      case 'Hard':
+        return baseSpeed + randomVariation + 4;
+      default:
+        return baseSpeed + randomVariation;
+    }
+  };
+  
+  const newFruit = {
+    id: Date.now() + Math.random(),
+    x: Math.random() * (800 - 80), // Ensure fruit doesn't spawn too close to edge
+    y: -80,
+    number,
+    type: fruitTypes[Math.floor(Math.random() * fruitTypes.length)],
+    isCorrect: isCorrectAnswer,
+    isPowerUp,
+    powerType,
+    cut: false,
+    rotation: Math.random() * 360,
+    speed: getSpeedByDifficulty(),
+    rotationSpeed: 1 + Math.random() * 3 // Add rotation speed variety
+  };
+>>>>>>> Stashed changes:frontend/src/components/GameScreen.jsx
 
-    setGameState(prev => ({
-      ...prev,
-      fruits: [...prev.fruits, newFruit]
-    }));
-  }, [currentProblem, difficultyLevel, setGameState]);
+  setGameState(prev => ({
+    ...prev,
+    fruits: [...prev.fruits, newFruit]
+  }));
+}, [currentProblem, difficultyLevel, setGameState]);
 
   // Achievement checker
   const checkAchievements = (newScore, newCombo) => {
@@ -207,6 +263,34 @@ export default function GameScreen({
     }
   };
 
+<<<<<<< Updated upstream:frontend/Math_Ninja/Frontend/src/components/GameScreen.jsx
+  // Enhanced collision detection with power-ups and combo system
+  function checkFruitCollisions(handX, handY) {
+    setGameState(prev => {
+      let hasChanges = false;
+      const updatedFruits = prev.fruits.map(fruit => {
+        if (fruit.cut) return fruit;
+        
+        const distance = Math.sqrt(
+          Math.pow(handX - (fruit.x + 40), 2) + 
+          Math.pow(handY - (fruit.y + 40), 2)
+        );
+        
+        if (distance < 50) {
+          hasChanges = true;
+          createSlashEffect(fruit.x + 40, fruit.y + 40, fruit.isPowerUp ? 'powerup' : 'normal');
+          createFruitExplosion(fruit.x + 40, fruit.y + 40);
+          createJuiceSplash(fruit.x + 40, fruit.y + 40, fruit.type);
+          return { ...fruit, cut: true };
+        }
+        return fruit;
+      });
+      
+      if (!hasChanges) return prev;
+      
+      const newlyCut = updatedFruits.filter(fruit => 
+        fruit.cut && !prev.fruits.find(f => f.id === fruit.id)?.cut
+=======
   // Web Audio Context and sound buffers
 const audioContextRef = useRef(null);
 const soundBuffersRef = useRef({});
@@ -379,45 +463,26 @@ const fallbackPlaySound = (soundType, volume = 0.5) => {
   }
 };
 
-  //collision detection with power-ups and combo system
-  function checkFruitCollisions(handX, handY) {
-    setGameState(prev => {
-      console.log('🎯 Collision check - current lives:', prev.lives);
+// Updated collision detection with enhanced effects
+function checkFruitCollisions(handX, handY) {
+  setGameState(prev => {
+    console.log('Collision check - current lives:', prev.lives);
+    
+    let hasChanges = false;
+    const updatedFruits = prev.fruits.map(fruit => {
+      if (fruit.cut) return fruit;
       
-      let hasChanges = false;
-      const updatedFruits = prev.fruits.map(fruit => {
-        if (fruit.cut) return fruit;
-        
-        const distance = Math.sqrt(
-          Math.pow(handX - (fruit.x + 40), 2) + 
-          Math.pow(handY - (fruit.y + 40), 2)
-        );
-        
-        if (distance < 50) {
-          hasChanges = true;
-          playSound('cut', 0.7);
-          createSlashEffect(fruit.x + 40, fruit.y + 40, fruit.isPowerUp ? 'powerup' : 'normal');
-          createFruitExplosion(fruit.x + 40, fruit.y + 40);
-          createJuiceSplash(fruit.x + 40, fruit.y + 40, fruit.type);
-          return { ...fruit, cut: true };
-        }
-        return fruit;
-      });
-      
-      if (!hasChanges) return prev;
-      
-      const newlyCut = updatedFruits.filter(fruit => 
-        fruit.cut && !prev.fruits.find(f => f.id === fruit.id)?.cut
+      const distance = Math.sqrt(
+        Math.pow(handX - (fruit.x + 40), 2) + 
+        Math.pow(handY - (fruit.y + 40), 2)
+>>>>>>> Stashed changes:frontend/src/components/GameScreen.jsx
       );
       
-      let newScore = prev.score;
-      let newLives = prev.lives;
-      let newCombo = combo;
-      let shouldGenerateNewProblem = false;
-      
-      newlyCut.forEach(fruit => {
-        setTotalFruitsAttempted(prev => prev + 1);
+      if (distance < 50) {
+        hasChanges = true;
+        playSound('cut', 0.7);
         
+<<<<<<< Updated upstream:frontend/Math_Ninja/Frontend/src/components/GameScreen.jsx
         if (fruit.isPowerUp) {
           activatePowerUp(fruit.powerType);
           playSound('powerup');
@@ -432,35 +497,283 @@ const fallbackPlaySound = (soundType, volume = 0.5) => {
           setCorrectAnswers(prev => prev + 1);
           playSound('correct');
         } else {
-          const hasShield = powerUps.some(p => p.name === 'Shield');
-          if (!hasShield) {
-            newLives = Math.max(0, newLives - 1);
-            console.log('💔 Lives decremented by collision:', prev.lives, '->', newLives);
-          }
+          newLives = Math.max(0, newLives - 1);
           newCombo = 0;
           playSound('wrong');
+=======
+        // Calculate velocity for more realistic effects
+        const velocity = tracingPath.current.length > 1 ? {
+          x: tracingPath.current[tracingPath.current.length - 1].x - tracingPath.current[tracingPath.current.length - 2].x,
+          y: tracingPath.current[tracingPath.current.length - 1].y - tracingPath.current[tracingPath.current.length - 2].y
+        } : { x: 0, y: 0 };
+        
+        createFruitNinjaSlashEffect(fruit.x + 40, fruit.y + 40, fruit.isPowerUp ? 'powerup' : 'normal', velocity);
+        createFruitNinjaExplosion(fruit.x + 40, fruit.y + 40, fruit.isPowerUp);
+        createFruitNinjaJuiceSplash(fruit.x + 40, fruit.y + 40, fruit.type, fruit.isPowerUp, velocity);
+        
+        // Screen shake for powerful cuts
+        if (combo > 3) {
+          const gameArea = document.querySelector('.game-area');
+          if (gameArea) {
+            gameArea.classList.add('shake');
+            setTimeout(() => gameArea.classList.remove('shake'), 200);
+          }
+>>>>>>> Stashed changes:frontend/src/components/GameScreen.jsx
         }
-      });
-      
-      setCombo(newCombo);
-      if (newCombo > maxCombo) {
-        setMaxCombo(newCombo);
+        
+        return { ...fruit, cut: true };
       }
-      
-      checkAchievements(newScore, newCombo);
-      
-      if (shouldGenerateNewProblem) {
-        setTimeout(() => setCurrentProblem(generateProblem()), 500);
-      }
-      
-      return {
-        ...prev,
-        fruits: updatedFruits,
-        score: newScore,
-        lives: newLives
-      };
+      return fruit;
     });
+    
+    if (!hasChanges) return prev;
+    
+    const newlyCut = updatedFruits.filter(fruit => 
+      fruit.cut && !prev.fruits.find(f => f.id === fruit.id)?.cut
+    );
+    
+    let newScore = prev.score;
+    let newLives = prev.lives;
+    let newCombo = combo;
+    let shouldGenerateNewProblem = false;
+    
+    newlyCut.forEach(fruit => {
+      setTotalFruitsAttempted(prev => prev + 1);
+      
+      if (fruit.isPowerUp) {
+        activatePowerUp(fruit.powerType);
+        playSound('powerup');
+        newScore += 5;
+        newCombo += 1;
+        showPowerUpActivation();
+      } else if (fruit.isCorrect) {
+        const basePoints = 10;
+        const comboBonus = Math.floor(basePoints * (newCombo * 0.5));
+        const doublePoints = powerUps.some(p => p.name === 'Double Points');
+        const totalPoints = (basePoints + comboBonus) * (doublePoints ? 2 : 1);
+        newScore += totalPoints;
+        newCombo += 1;
+        shouldGenerateNewProblem = true;
+        setCorrectAnswers(prev => prev + 1);
+        playSound('correct');
+        
+        if (newCombo > 2) {
+          showComboDisplay(newCombo);
+        }
+      } else {
+        const hasShield = powerUps.some(p => p.name === 'Shield');
+        if (!hasShield) {
+          newLives = Math.max(0, newLives - 1);
+          console.log('Lives decremented by collision:', prev.lives, '->', newLives);
+        }
+        newCombo = 0;
+        playSound('wrong');
+      }
+    });
+    
+    setCombo(newCombo);
+    if (newCombo > maxCombo) {
+      setMaxCombo(newCombo);
+    }
+    
+    checkAchievements(newScore, newCombo);
+    
+    if (shouldGenerateNewProblem) {
+      setTimeout(() => setCurrentProblem(generateProblem()), 500);
+    }
+    
+    return {
+      ...prev,
+      fruits: updatedFruits,
+      score: newScore,
+      lives: newLives
+    };
+  });
+
+// ADD THIS at the very end of checkFruitCollisions, before the closing bracket:
+    
+    // Track for adaptive difficulty
+    if (typeof AdaptiveDifficultySystem?.recordPlayerAction === 'function') {
+      newlyCut.forEach(fruit => {
+        AdaptiveDifficultySystem.recordPlayerAction({
+          handPosition: { x: handX / 800, y: handY / 600 },
+          fruitPosition: { x: fruit.x, y: fruit.y },
+          accuracy: fruit.isCorrect ? 1 : 0,
+          responseTime: Date.now() - (fruit.spawnTime || Date.now()),
+          success: fruit.isCorrect || fruit.isPowerUp
+        });
+      });
+    }
+}
+
+// Enhanced explosion with more particles
+const createFruitNinjaExplosion = (x, y, isPowerUp = false) => {
+  const particleCount = isPowerUp ? 20 : 12;
+  const colors = isPowerUp 
+    ? ['#FFD700', '#FF69B4', '#00BFFF', '#32CD32', '#FF4500'] 
+    : ['#ff4b4b', '#ffa500', '#ffe135', '#ff69b4'];
+  
+  for (let i = 0; i < particleCount; i++) {
+    const particle = document.createElement('div');
+    particle.className = isPowerUp ? 'fruit-explosion powerup' : 'fruit-explosion';
+    particle.style.left = `${x}px`;
+    particle.style.top = `${y}px`;
+    particle.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+    
+    const angle = Math.random() * 2 * Math.PI;
+    const distance = (isPowerUp ? 80 : 60) + Math.random() * 40;
+    particle.style.setProperty('--dx', `${Math.cos(angle) * distance}px`);
+    particle.style.setProperty('--dy', `${Math.sin(angle) * distance}px`);
+    
+    const gameArea = document.querySelector('.game-area');
+    if (gameArea) {
+      gameArea.appendChild(particle);
+      setTimeout(() => particle.remove(), isPowerUp ? 1200 : 800);
+    }
   }
+ 
+};
+
+// Show combo display
+const showComboDisplay = (comboCount) => {
+  const gameArea = document.querySelector('.game-area');
+  if (!gameArea) return;
+  
+  // Remove existing combo display
+  const existingCombo = gameArea.querySelector('.combo-display');
+  if (existingCombo) {
+    existingCombo.remove();
+  }
+  
+  const comboDisplay = document.createElement('div');
+  comboDisplay.className = 'combo-display';
+  comboDisplay.innerHTML = `<div class="combo-text">${comboCount}x COMBO!</div>`;
+  
+  gameArea.appendChild(comboDisplay);
+  
+  setTimeout(() => {
+    if (comboDisplay.parentNode) {
+      comboDisplay.remove();
+    }
+  }, 2000);
+};
+
+// Show power-up activation effect
+const showPowerUpActivation = () => {
+  const gameArea = document.querySelector('.game-area');
+  if (!gameArea) return;
+  
+  const powerupEffect = document.createElement('div');
+  powerupEffect.className = 'powerup-activation';
+  
+  gameArea.appendChild(powerupEffect);
+  
+  setTimeout(() => {
+    if (powerupEffect.parentNode) {
+      powerupEffect.remove();
+    }
+  }, 800);
+};
+
+// Add velocity-based cursor effects
+const updateSwordCursor = () => {
+  const gameArea = document.querySelector('.game-area');
+  if (!gameArea) return;
+  
+  let cursor = gameArea.querySelector('.sword-cursor');
+  if (!cursor) {
+    cursor = document.createElement('div');
+    cursor.className = 'sword-cursor';
+    gameArea.appendChild(cursor);
+  }
+  
+  if (tracingPath.current.length > 0) {
+    const lastPoint = tracingPath.current[tracingPath.current.length - 1];
+    cursor.style.left = (lastPoint.x - 10) + 'px';
+    cursor.style.top = (lastPoint.y - 10) + 'px';
+    
+    // Add velocity-based effects
+    if (lastPoint.velocity > 15) {
+      cursor.classList.add('high-velocity');
+    } else {
+      cursor.classList.remove('high-velocity');
+    }
+    
+    // Add combo effects
+    if (combo > 2) {
+      cursor.classList.add('combo-active');
+    } else {
+      cursor.classList.remove('combo-active');
+    }
+    
+    cursor.style.display = 'block';
+  } else {
+    cursor.style.display = 'none';
+  }
+};
+
+
+// Enhanced slash effect with velocity-based properties
+const createFruitNinjaSlashEffect = (x, y, type = 'normal', velocity = { x: 0, y: 0 }) => {
+  const slashId = Date.now() + Math.random();
+  
+  // Calculate angle based on velocity
+  const angle = velocity.x !== 0 || velocity.y !== 0 
+    ? Math.atan2(velocity.y, velocity.x) * 180 / Math.PI 
+    : Math.random() * 360;
+    
+  const speed = Math.sqrt(velocity.x * velocity.x + velocity.y * velocity.y);
+  const length = type === 'powerup' ? 140 + speed * 2 : 100 + speed;
+  
+  const newSlash = {
+    id: slashId,
+    x: x - length / 2,
+    y: y - 3,
+    width: length,
+    rotation: angle,
+    type
+  };
+  
+  setSlashEffects(prev => [...prev, newSlash]);
+  
+  // Enhanced sparks based on velocity
+  const sparkCount = type === 'powerup' ? 15 + Math.floor(speed / 5) : 8 + Math.floor(speed / 8);
+  for (let i = 0; i < sparkCount; i++) {
+    const sparkId = Date.now() + Math.random() + i;
+    const sparkAngle = (angle + (Math.random() - 0.5) * 90) * Math.PI / 180;
+    const sparkDistance = (type === 'powerup' ? 60 : 40) + speed + Math.random() * 30;
+    const sparkX = Math.cos(sparkAngle) * sparkDistance;
+    const sparkY = Math.sin(sparkAngle) * sparkDistance;
+    
+    const spark = {
+      id: sparkId,
+      x: x - 4,
+      y: y - 4,
+      sparkX,
+      sparkY,
+      type
+    };
+    
+    setTimeout(() => {
+      const sparkElement = document.createElement('div');
+      sparkElement.className = `slash-sparks ${type}`;
+      sparkElement.style.left = spark.x + 'px';
+      sparkElement.style.top = spark.y + 'px';
+      sparkElement.style.setProperty('--spark-x', spark.sparkX + 'px');
+      sparkElement.style.setProperty('--spark-y', spark.sparkY + 'px');
+      
+      const gameArea = document.querySelector('.game-area');
+      if (gameArea) {
+        gameArea.appendChild(sparkElement);
+        setTimeout(() => sparkElement.remove(), 600);
+      }
+    }, 50);
+  }
+  
+  setTimeout(() => {
+    setSlashEffects(prev => prev.filter(s => s.id !== slashId));
+  }, 400);
+};
 
   // Enhanced createSlashEffect with types
   const createSlashEffect = (x, y, type = 'normal') => {
@@ -542,6 +855,173 @@ const fallbackPlaySound = (soundType, volume = 0.5) => {
     }
   };
 
+// MASSIVELY ENHANCED: Fruit Ninja style juice splash
+const createFruitNinjaJuiceSplash = (x, y, fruitType, isPowerUp = false, velocity = { x: 0, y: 0 }) => {
+  const gameArea = document.querySelector('.game-area');
+  if (!gameArea) return;
+
+  // Fruit-specific juice colors and properties
+  const juiceProperties = {
+    Apple: { 
+      colors: ['#FF4444', '#FF6B6B', '#FF8E8E'], 
+      seeds: ['#8B4513', '#654321'],
+      pulp: '#FFB6C1'
+    },
+    Pomegranate: { 
+      colors: ['#DC143C', '#B22222', '#8B0000'], 
+      seeds: ['#4B0000', '#2F0000'],
+      pulp: '#FF69B4'
+    },
+    Pineapple: { 
+      colors: ['#FFD700', '#FFA500', '#FF8C00'], 
+      seeds: ['#8B4513', '#A0522D'],
+      pulp: '#FFFF99'
+    },
+    Watermelon: { 
+      colors: ['#FF69B4', '#FF1493', '#DC143C'], 
+      seeds: ['#000000', '#2F2F2F'],
+      pulp: '#98FB98'
+    }
+  };
+
+  const juice = juiceProperties[fruitType] || juiceProperties.Apple;
+  
+  if (isPowerUp) {
+    // Special rainbow effect for power-ups
+    juice.colors = ['#FFD700', '#FF69B4', '#00BFFF', '#32CD32', '#FF4500'];
+  }
+
+  // Create main juice splash particles
+  const splashCount = isPowerUp ? 25 : 15;
+  for (let i = 0; i < splashCount; i++) {
+    const splash = document.createElement('div');
+    splash.className = isPowerUp ? 'fruit-ninja-juice powerup' : 'fruit-ninja-juice';
+    splash.style.position = 'absolute';
+    splash.style.pointerEvents = 'none';
+    splash.style.zIndex = '12';
+    
+    // Random splash properties
+    const size = 8 + Math.random() * 12;
+    splash.style.width = size + 'px';
+    splash.style.height = size + 'px';
+    splash.style.borderRadius = '50%';
+    
+    // Color selection
+    const color = juice.colors[Math.floor(Math.random() * juice.colors.length)];
+    splash.style.background = isPowerUp ? 
+      `radial-gradient(circle, ${color}, ${juice.colors[Math.floor(Math.random() * juice.colors.length)]})` :
+      `radial-gradient(circle, ${color}, ${color}88)`;
+    
+    // Position
+    splash.style.left = (x - size/2) + 'px';
+    splash.style.top = (y - size/2) + 'px';
+    
+    // Physics-based trajectory
+    const angle = Math.random() * 2 * Math.PI;
+    const speed = 100 + Math.random() * 200;
+    const gravity = 300;
+    const dx = Math.cos(angle) * speed + velocity.x * 50;
+    const dy = Math.sin(angle) * speed + velocity.y * 50;
+    
+    splash.style.setProperty('--dx', dx + 'px');
+    splash.style.setProperty('--dy', dy + 'px');
+    splash.style.setProperty('--gravity', gravity + 'px');
+    
+    gameArea.appendChild(splash);
+    setTimeout(() => splash.remove(), 1500);
+  }
+
+  // Create fruit seeds
+  const seedCount = fruitType === 'Watermelon' ? 8 : fruitType === 'Pomegranate' ? 12 : 3;
+  for (let i = 0; i < seedCount; i++) {
+    const seed = document.createElement('div');
+    seed.className = 'fruit-ninja-seed';
+    seed.style.position = 'absolute';
+    seed.style.pointerEvents = 'none';
+    seed.style.zIndex = '11';
+    
+    const seedSize = 3 + Math.random() * 4;
+    seed.style.width = seedSize + 'px';
+    seed.style.height = seedSize + 'px';
+    seed.style.borderRadius = fruitType === 'Watermelon' ? '50%' : '20%';
+    seed.style.background = juice.seeds[Math.floor(Math.random() * juice.seeds.length)];
+    
+    seed.style.left = (x - seedSize/2) + 'px';
+    seed.style.top = (y - seedSize/2) + 'px';
+    
+    const angle = Math.random() * 2 * Math.PI;
+    const speed = 80 + Math.random() * 120;
+    const dx = Math.cos(angle) * speed;
+    const dy = Math.sin(angle) * speed;
+    
+    seed.style.setProperty('--dx', dx + 'px');
+    seed.style.setProperty('--dy', dy + 'px');
+    seed.style.setProperty('--gravity', '400px');
+    
+    gameArea.appendChild(seed);
+    setTimeout(() => seed.remove(), 2000);
+  }
+
+  // Create fruit pulp chunks
+  const pulpCount = 6;
+  for (let i = 0; i < pulpCount; i++) {
+    const pulp = document.createElement('div');
+    pulp.className = 'fruit-ninja-pulp';
+    pulp.style.position = 'absolute';
+    pulp.style.pointerEvents = 'none';
+    pulp.style.zIndex = '10';
+    
+    const pulpSize = 6 + Math.random() * 8;
+    pulp.style.width = pulpSize + 'px';
+    pulp.style.height = pulpSize + 'px';
+    pulp.style.borderRadius = '30%';
+    pulp.style.background = juice.pulp;
+    pulp.style.opacity = '0.8';
+    
+    pulp.style.left = (x - pulpSize/2) + 'px';
+    pulp.style.top = (y - pulpSize/2) + 'px';
+    
+    const angle = Math.random() * 2 * Math.PI;
+    const speed = 60 + Math.random() * 100;
+    const dx = Math.cos(angle) * speed;
+    const dy = Math.sin(angle) * speed - 50; // Slight upward bias
+    
+    pulp.style.setProperty('--dx', dx + 'px');
+    pulp.style.setProperty('--dy', dy + 'px');
+    pulp.style.setProperty('--gravity', '250px');
+    
+    gameArea.appendChild(pulp);
+    setTimeout(() => pulp.remove(), 1800);
+  }
+
+  // Create juice streaks for dramatic effect
+  for (let i = 0; i < 3; i++) {
+    const streak = document.createElement('div');
+    streak.className = 'fruit-ninja-streak';
+    streak.style.position = 'absolute';
+    streak.style.pointerEvents = 'none';
+    streak.style.zIndex = '9';
+    
+    const width = 40 + Math.random() * 60;
+    const height = 4 + Math.random() * 6;
+    streak.style.width = width + 'px';
+    streak.style.height = height + 'px';
+    streak.style.borderRadius = height/2 + 'px';
+    
+    const color = juice.colors[0];
+    streak.style.background = `linear-gradient(90deg, transparent, ${color}, transparent)`;
+    
+    const angle = Math.random() * 2 * Math.PI;
+    streak.style.transform = `rotate(${angle}rad)`;
+    streak.style.left = (x - width/2) + 'px';
+    streak.style.top = (y - height/2) + 'px';
+    
+    gameArea.appendChild(streak);
+    setTimeout(() => streak.remove(), 1200);
+  }
+};
+
+
   // Enhanced juice splash with power-up effects
   const createJuiceSplash = (x, y, fruitType, isPowerUp = false) => {
     const colors = isPowerUp ? 
@@ -576,6 +1056,8 @@ const fallbackPlaySound = (soundType, volume = 0.5) => {
     }
   };
 
+
+  
   // Load MediaPipe scripts
   useEffect(() => {
     const loadMediaPipe = async () => {
@@ -610,6 +1092,23 @@ const fallbackPlaySound = (soundType, volume = 0.5) => {
     loadMediaPipe();
   }, []);
 
+// Initialize Enhanced Systems
+useEffect(() => {
+  const initializeSystems = async () => {
+    try {
+      AdaptiveDifficultySystem.initialize?.();
+      await AdvancedAudioSystem.initialize?.();
+      AccessibilityFeatures.initialize?.();
+      AdvancedParticleSystem.initialize?.();
+      console.log('Enhanced systems initialized');
+    } catch (error) {
+      console.warn('Some enhanced systems failed to initialize:', error);
+    }
+  };
+  
+  initializeSystems();
+}, []);
+
   // Initialize MediaPipe
   useEffect(() => {
     if (!handsLoaded || !window.Hands || !window.Camera) return;
@@ -617,20 +1116,15 @@ const fallbackPlaySound = (soundType, volume = 0.5) => {
 
     console.info('[GameScreen] Initializing Hands + Camera');
 
-    if (!running && onToggleRunning) {
-      console.log('Auto-starting tracking after MediaPipe initialization');
-      setTimeout(() => onToggleRunning(), 100); // Small delay to ensure everything is ready
-    }
-
     const hands = new window.Hands({
       locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`
     });
     
-    hands.setOptions({
+ hands.setOptions({
       maxNumHands: 1,
-      modelComplexity: 1,
-      minDetectionConfidence: 0.7,
-      minTrackingConfidence: 0.6,
+      modelComplexity: 0, // Reduced from 1 for better performance
+      minDetectionConfidence: 0.5, // Reduced for better tracking
+      minTrackingConfidence: 0.5, // Reduced for better tracking
     });
     
     hands.onResults(onResults);
@@ -701,61 +1195,119 @@ const fallbackPlaySound = (soundType, volume = 0.5) => {
     };
   }, [handsLoaded, showWebcam]);
 
-  // Hand tracking results with enhanced gesture detection
-  function onResults(results) {
-    if (!results.multiHandLandmarks || results.multiHandLandmarks.length === 0) return;
-    const landmarks = results.multiHandLandmarks[0];
-    const tip = landmarks[8];
 
-    // Check for special gestures
-    const indexTip = landmarks[8];
-    const middleTip = landmarks[12];
-    const ringTip = landmarks[16];
-    const pinkyTip = landmarks[20];
+// Replace the onResults function and related functions in GameScreen.jsx
+
+// Enhanced hand tracking with Fruit Ninja style effects
+function onResults(results) {
+  if (!results.multiHandLandmarks || results.multiHandLandmarks.length === 0) {
+    // Clear the trail when no hand is detected
+    tracingPath.current = [];
+    return;
+  }
+  
+  const landmarks = results.multiHandLandmarks[0];
+  const tip = landmarks[8];
+
+  // Check for special gestures
+  const indexTip = landmarks[8];
+  const middleTip = landmarks[12];
+  const ringTip = landmarks[16];
+  const pinkyTip = landmarks[20];
+  
+  const indexUp = indexTip.y < landmarks[6].y;
+  const middleUp = middleTip.y < landmarks[10].y;
+  const ringDown = ringTip.y > landmarks[14].y;
+  const pinkyDown = pinkyTip.y > landmarks[18].y;
+  
+// // Enhanced gesture recognition
+// const gesture = GestureRecognition?.analyzeGesture?.(landmarks);
+// if (gesture) {
+//   console.log('Special gesture detected:', gesture);
+//   // Add visual feedback for gestures
+//   const gameArea = document.querySelector('.game-area');
+//   if (gameArea) {
+//     const gestureIndicator = document.createElement('div');
+//     gestureIndicator.className = 'gesture-indicator';
+//     gestureIndicator.textContent = gesture === 'peace' ? '✌️' : gesture === 'thumbsup' ? '👍' : '✊';
+//     gestureIndicator.style.left = (emaPos.current.x - 25) + 'px';
+//     gestureIndicator.style.top = (emaPos.current.y - 25) + 'px';
+//     gameArea.appendChild(gestureIndicator);
+//     setTimeout(() => gestureIndicator.remove(), 1000);
+//   }
+// }
+
+  // Enhanced coordinate mapping with proper bounds expansion
+  const expandedX = Math.max(-0.1, Math.min(1.1, (tip.x - 0.15) / 0.7)); 
+  const expandedY = Math.max(-0.1, Math.min(1.1, (tip.y - 0.15) / 0.7)); 
+  
+  const gameArea = document.querySelector('.game-area');
+  const gameRect = gameArea ? gameArea.getBoundingClientRect() : { width: 800, height: 600 };
+  
+  const rawX = (1 - expandedX) * gameRect.width;
+  const rawY = expandedY * gameRect.height;
+
+  if (showWebcam) {
+    const overlay = document.querySelector('.webcam-overlay');
+    if (!overlay) return;
+    const ctx = overlay.getContext('2d');
+    ctx.clearRect(0, 0, overlay.width, overlay.height);
+
+    drawHandSkeleton(ctx, landmarks, overlay.width, overlay.height);
+
+    const alpha = 0.15;
+    emaPos.current.x = alpha * rawX + (1 - alpha) * emaPos.current.x;
+    emaPos.current.y = alpha * rawY + (1 - alpha) * emaPos.current.y;
+
+    emaPos.current.x = Math.max(-10, Math.min(gameRect.width + 10, emaPos.current.x));
+    emaPos.current.y = Math.max(-10, Math.min(gameRect.height + 10, emaPos.current.y));
+
+    checkFruitCollisions(emaPos.current.x, emaPos.current.y);
+    drawFruitNinjaTrackingOnGameCanvas(emaPos.current.x, emaPos.current.y);
+  } else {
+    if (!overlayRef.current) return;
+    const ctx = overlayRef.current.getContext('2d');
     
-    const indexUp = indexTip.y < landmarks[6].y;
-    const middleUp = middleTip.y < landmarks[10].y;
-    const ringDown = ringTip.y > landmarks[14].y;
-    const pinkyDown = pinkyTip.y > landmarks[18].y;
-    
-    if (indexUp && middleUp && ringDown && pinkyDown) {
-      console.log('Peace sign detected!');
+    if (overlayRef.current.width !== gameRect.width || overlayRef.current.height !== gameRect.height) {
+      overlayRef.current.width = gameRect.width;
+      overlayRef.current.height = gameRect.height;
+      overlayRef.current.style.width = gameRect.width + 'px';
+      overlayRef.current.style.height = gameRect.height + 'px';
     }
+    
+    ctx.clearRect(0, 0, gameRect.width, gameRect.height);
 
-    if (showWebcam) {
-      const overlay = document.querySelector('.webcam-overlay');
-      if (!overlay) return;
-      const ctx = overlay.getContext('2d');
-      ctx.clearRect(0, 0, overlay.width, overlay.height);
+    const alpha = 0.15;
+    emaPos.current.x = alpha * rawX + (1 - alpha) * emaPos.current.x;
+    emaPos.current.y = alpha * rawY + (1 - alpha) * emaPos.current.y;
 
-      drawHandSkeleton(ctx, landmarks, overlay.width, overlay.height);
+    emaPos.current.x = Math.max(-10, Math.min(gameRect.width + 10, emaPos.current.x));
+    emaPos.current.y = Math.max(-10, Math.min(gameRect.height + 10, emaPos.current.y));
 
-      const rawX = (1 - tip.x) * 800;
-      const rawY = tip.y * 600;
-
-      const alpha = 0.3;
-      emaPos.current.x = alpha * rawX + (1 - alpha) * emaPos.current.x;
-      emaPos.current.y = alpha * rawY + (1 - alpha) * emaPos.current.y;
-
-      checkFruitCollisions(emaPos.current.x, emaPos.current.y);
-      drawTrackingOnGameCanvas(emaPos.current.x, emaPos.current.y);
-    } else {
-      if (!overlayRef.current) return;
-      const ctx = overlayRef.current.getContext('2d');
-      ctx.clearRect(0, 0, overlayRef.current.width, overlayRef.current.height);
-
-      const gameX = (1 - tip.x) * overlayRef.current.width;
-      const gameY = tip.y * overlayRef.current.height;
-
-      const alpha = 0.3;
-      emaPos.current.x = alpha * gameX + (1 - alpha) * emaPos.current.x;
-      emaPos.current.y = alpha * gameY + (1 - alpha) * emaPos.current.y;
-
+    // Add current position to trail with velocity calculation
+    const now = Date.now();
+    if (tracingPath.current.length > 0) {
+      const lastPoint = tracingPath.current[tracingPath.current.length - 1];
+      const distance = Math.sqrt(
+        Math.pow(emaPos.current.x - lastPoint.x, 2) + 
+        Math.pow(emaPos.current.y - lastPoint.y, 2)
+      );
+      const velocity = distance / ((now - lastPoint.timestamp) || 1);
+      
       tracingPath.current.push({
         x: emaPos.current.x,
         y: emaPos.current.y,
-        timestamp: Date.now()
+        timestamp: now,
+        velocity: velocity
       });
+    } else {
+      tracingPath.current.push({
+        x: emaPos.current.x,
+        y: emaPos.current.y,
+        timestamp: now,
+        velocity: 0
+      });
+<<<<<<< Updated upstream:frontend/Math_Ninja/Frontend/src/components/GameScreen.jsx
 
       const now = Date.now();
       tracingPath.current = tracingPath.current.filter(
@@ -782,6 +1334,7 @@ const fallbackPlaySound = (soundType, volume = 0.5) => {
           ctx.moveTo(point.x, point.y);
         }
       }
+
       ctx.globalAlpha = 1;
       ctx.fillStyle = combo > 2 ? '#FFD700' : '#FF6B6B';
       ctx.beginPath();
@@ -799,77 +1352,244 @@ const fallbackPlaySound = (soundType, volume = 0.5) => {
       }
 
       checkFruitCollisions(emaPos.current.x, emaPos.current.y);
+=======
+>>>>>>> Stashed changes:frontend/src/components/GameScreen.jsx
     }
-  }
 
-  // Draw tracking elements on the main game canvas when webcam is shown
-  function drawTrackingOnGameCanvas(gameX, gameY) {
-    const gameArea = document.querySelector('.game-area');
-    if (!gameArea) return;
-    
-    let mainCanvas = gameArea.querySelector('.main-tracking-canvas');
-    if (!mainCanvas) {
-      mainCanvas = document.createElement('canvas');
-      mainCanvas.className = 'main-tracking-canvas';
-      mainCanvas.width = 800;
-      mainCanvas.height = 600;
-      mainCanvas.style.position = 'absolute';
-      mainCanvas.style.top = '0';
-      mainCanvas.style.left = '0';
-      mainCanvas.style.pointerEvents = 'none';
-      mainCanvas.style.zIndex = '15';
-      gameArea.appendChild(mainCanvas);
-    }
-    
-    const ctx = mainCanvas.getContext('2d');
-    ctx.clearRect(0, 0, mainCanvas.width, mainCanvas.height);
+    // Keep only recent points for the trail
+    tracingPath.current = tracingPath.current.filter(
+      point => now - point.timestamp < 500 // Shorter, more dynamic trail
+    );
+
+    // Draw Fruit Ninja style sword trail
+    drawFruitNinjaSwordTrail(ctx, tracingPath.current, combo);
+
+    checkFruitCollisions(emaPos.current.x, emaPos.current.y);
+  }
+}
+
+// UPDATED: Enhanced drawFruitNinjaTrackingOnGameCanvas
+function drawFruitNinjaTrackingOnGameCanvas(gameX, gameY) {
+  const gameArea = document.querySelector('.game-area');
+  if (!gameArea) return;
+  
+  const gameRect = gameArea.getBoundingClientRect();
+  
+  let mainCanvas = gameArea.querySelector('.main-tracking-canvas');
+  if (!mainCanvas) {
+    mainCanvas = document.createElement('canvas');
+    mainCanvas.className = 'main-tracking-canvas';
+    mainCanvas.style.position = 'absolute';
+    mainCanvas.style.top = '0';
+    mainCanvas.style.left = '0';
+    mainCanvas.style.pointerEvents = 'none';
+    mainCanvas.style.zIndex = '15';
+    gameArea.appendChild(mainCanvas);
+  }
+  
+  if (mainCanvas.width !== gameRect.width || mainCanvas.height !== gameRect.height) {
+    mainCanvas.width = gameRect.width;
+    mainCanvas.height = gameRect.height;
+    mainCanvas.style.width = gameRect.width + 'px';
+    mainCanvas.style.height = gameRect.height + 'px';
+  }
+  
+  const ctx = mainCanvas.getContext('2d');
+  ctx.clearRect(0, 0, mainCanvas.width, mainCanvas.height);
+  
+  const now = Date.now();
+  if (tracingPath.current.length > 0) {
+    const lastPoint = tracingPath.current[tracingPath.current.length - 1];
+    const distance = Math.sqrt(
+      Math.pow(gameX - lastPoint.x, 2) + 
+      Math.pow(gameY - lastPoint.y, 2)
+    );
+    const velocity = distance / ((now - lastPoint.timestamp) || 1);
     
     tracingPath.current.push({ 
       x: gameX, 
       y: gameY, 
-      timestamp: Date.now() 
+      timestamp: now,
+      velocity: velocity
     });
-    
-    const now = Date.now();
-    tracingPath.current = tracingPath.current.filter(point => now - point.timestamp < 1000);
+  } else {
+    tracingPath.current.push({ 
+      x: gameX, 
+      y: gameY, 
+      timestamp: now,
+      velocity: 0
+    });
+  }
+  
+  tracingPath.current = tracingPath.current.filter(point => now - point.timestamp < 500);
+  
+  drawFruitNinjaSwordTrail(ctx, tracingPath.current, combo);
+}
 
-    if (tracingPath.current.length > 1) {
-      ctx.strokeStyle = combo > 2 ? '#FFD700' : '#FF6B6B';
-      ctx.lineWidth = combo > 2 ? 6 : 4;
-      ctx.lineCap = 'round';
-      ctx.lineJoin = 'round';
-      ctx.globalAlpha = 0.8;
+
+// NEW: Fruit Ninja style sword trail drawing
+function drawFruitNinjaSwordTrail(ctx, trail, combo) {
+  if (trail.length < 2) return;
+  
+  ctx.save();
+  
+  // Create gradient for the sword trail
+  const gradient = ctx.createLinearGradient(
+    trail[0].x, trail[0].y,
+    trail[trail.length - 1].x, trail[trail.length - 1].y
+  );
+  
+  if (combo > 2) {
+    // Golden trail for high combo
+    gradient.addColorStop(0, 'rgba(255, 215, 0, 0)');
+    gradient.addColorStop(0.3, 'rgba(255, 215, 0, 0.8)');
+    gradient.addColorStop(0.7, 'rgba(255, 165, 0, 0.9)');
+    gradient.addColorStop(1, 'rgba(255, 69, 0, 1)');
+  } else {
+    // Blue-white trail for normal
+    gradient.addColorStop(0, 'rgba(135, 206, 250, 0)');
+    gradient.addColorStop(0.3, 'rgba(135, 206, 250, 0.6)');
+    gradient.addColorStop(0.7, 'rgba(100, 149, 237, 0.8)');
+    gradient.addColorStop(1, 'rgba(65, 105, 225, 1)');
+  }
+  
+  // Draw multiple layers for glow effect
+  for (let layer = 0; layer < 3; layer++) {
+    ctx.beginPath();
+    ctx.strokeStyle = gradient;
+    ctx.lineWidth = (layer === 0 ? 15 : layer === 1 ? 8 : 3);
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.globalAlpha = (layer === 0 ? 0.3 : layer === 1 ? 0.6 : 1.0);
+    ctx.shadowBlur = layer === 0 ? 20 : 0;
+    ctx.shadowColor = combo > 2 ? '#FFD700' : '#4169E1';
+    
+    // Draw smooth curves through trail points
+    if (trail.length >= 2) {
+      ctx.moveTo(trail[0].x, trail[0].y);
       
-      ctx.beginPath();
-      ctx.moveTo(tracingPath.current[0].x, tracingPath.current[0].y);
+      for (let i = 1; i < trail.length - 1; i++) {
+        const current = trail[i];
+        const next = trail[i + 1];
+        const cpx = (current.x + next.x) / 2;
+        const cpy = (current.y + next.y) / 2;
+        ctx.quadraticCurveTo(current.x, current.y, cpx, cpy);
+      }
       
-      for (let i = 1; i < tracingPath.current.length; i++) {
-        const point = tracingPath.current[i];
-        const age = (now - point.timestamp) / 1000;
-        ctx.globalAlpha = Math.max(0.1, 0.8 - age);
-        ctx.lineTo(point.x, point.y);
-        ctx.stroke();
-        ctx.beginPath();
-        ctx.moveTo(point.x, point.y);
+      // Draw to the last point
+      if (trail.length > 1) {
+        const lastPoint = trail[trail.length - 1];
+        ctx.lineTo(lastPoint.x, lastPoint.y);
       }
     }
-
-    ctx.globalAlpha = 1;
-    ctx.fillStyle = combo > 2 ? '#FFD700' : '#FF6B6B';
-    ctx.beginPath();
-    ctx.arc(gameX, gameY, combo > 2 ? 20 : 15, 0, Math.PI * 2);
-    ctx.fill();
     
-    if (combo > 2) {
-      ctx.strokeStyle = '#FFD700';
-      ctx.lineWidth = 3;
-      ctx.globalAlpha = 0.5;
-      ctx.beginPath();
-      ctx.arc(gameX, gameY, 35, 0, Math.PI * 2);
+    ctx.stroke();
+  }
+  
+  // Draw sword tip
+  const tip = trail[trail.length - 1];
+  ctx.globalAlpha = 1;
+  ctx.shadowBlur = 10;
+  ctx.shadowColor = combo > 2 ? '#FFD700' : '#FFFFFF';
+  
+  const tipGradient = ctx.createRadialGradient(tip.x, tip.y, 0, tip.x, tip.y, 25);
+  tipGradient.addColorStop(0, combo > 2 ? '#FFD700' : '#FFFFFF');
+  tipGradient.addColorStop(0.5, combo > 2 ? '#FFA500' : '#87CEEB');
+  tipGradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
+  
+  ctx.fillStyle = tipGradient;
+  ctx.beginPath();
+  ctx.arc(tip.x, tip.y, 25, 0, Math.PI * 2);
+  ctx.fill();
+  
+  // Inner bright core
+  ctx.shadowBlur = 5;
+  ctx.fillStyle = '#FFFFFF';
+  ctx.beginPath();
+  ctx.arc(tip.x, tip.y, 8, 0, Math.PI * 2);
+  ctx.fill();
+  
+  ctx.restore();
+}
+
+
+// ALSO UPDATE: Enhanced drawTrackingOnGameCanvas function
+function drawTrackingOnGameCanvas(gameX, gameY) {
+  const gameArea = document.querySelector('.game-area');
+  if (!gameArea) return;
+  
+  // Get actual game area dimensions
+  const gameRect = gameArea.getBoundingClientRect();
+  
+  let mainCanvas = gameArea.querySelector('.main-tracking-canvas');
+  if (!mainCanvas) {
+    mainCanvas = document.createElement('canvas');
+    mainCanvas.className = 'main-tracking-canvas';
+    mainCanvas.style.position = 'absolute';
+    mainCanvas.style.top = '0';
+    mainCanvas.style.left = '0';
+    mainCanvas.style.pointerEvents = 'none';
+    mainCanvas.style.zIndex = '15';
+    gameArea.appendChild(mainCanvas);
+  }
+  
+  // Update canvas size to match game area
+  if (mainCanvas.width !== gameRect.width || mainCanvas.height !== gameRect.height) {
+    mainCanvas.width = gameRect.width;
+    mainCanvas.height = gameRect.height;
+    mainCanvas.style.width = gameRect.width + 'px';
+    mainCanvas.style.height = gameRect.height + 'px';
+  }
+  
+  const ctx = mainCanvas.getContext('2d');
+  ctx.clearRect(0, 0, mainCanvas.width, mainCanvas.height);
+  
+  tracingPath.current.push({ 
+    x: gameX, 
+    y: gameY, 
+    timestamp: Date.now() 
+  });
+  
+  const now = Date.now();
+  tracingPath.current = tracingPath.current.filter(point => now - point.timestamp < 1000);
+
+  if (tracingPath.current.length > 1) {
+    ctx.strokeStyle = combo > 2 ? '#FFD700' : '#FF6B6B';
+    ctx.lineWidth = combo > 2 ? 6 : 4;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.globalAlpha = 0.8;
+    
+    ctx.beginPath();
+    ctx.moveTo(tracingPath.current[0].x, tracingPath.current[0].y);
+    
+    for (let i = 1; i < tracingPath.current.length; i++) {
+      const point = tracingPath.current[i];
+      const age = (now - point.timestamp) / 1000;
+      ctx.globalAlpha = Math.max(0.1, 0.8 - age);
+      ctx.lineTo(point.x, point.y);
       ctx.stroke();
-      ctx.globalAlpha = 1;
+      ctx.beginPath();
+      ctx.moveTo(point.x, point.y);
     }
   }
+
+  ctx.globalAlpha = 1;
+  ctx.fillStyle = combo > 2 ? '#FFD700' : '#FF6B6B';
+  ctx.beginPath();
+  ctx.arc(gameX, gameY, combo > 2 ? 20 : 15, 0, Math.PI * 2);
+  ctx.fill();
+  
+  if (combo > 2) {
+    ctx.strokeStyle = '#FFD700';
+    ctx.lineWidth = 3;
+    ctx.globalAlpha = 0.5;
+    ctx.beginPath();
+    ctx.arc(gameX, gameY, 35, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.globalAlpha = 1;
+  }
+}
 
   // Draw hand skeleton with enhanced visualization
   function drawHandSkeleton(ctx, landmarks, width, height) {
@@ -909,139 +1629,91 @@ const fallbackPlaySound = (soundType, volume = 0.5) => {
 
   // Game loop - enhanced with power-up effects
   useEffect(() => {
-  if (!running || gameState.lives <= 0) {
-    console.log('🛑 Game loop NOT starting:', { running, lives: gameState.lives });
-    return;
-  }
-  
-  console.log('🔄 Game loop starting with lives:', gameState.lives);
-  
-  const gameLoop = setInterval(() => {
-    setGameState(prev => {
-      console.log('🎮 Game loop tick - current lives:', prev.lives);
-      
-      const hasSpeedBoost = powerUps.some(p => p.name === 'Speed Boost');
-      const speedMultiplier = hasSpeedBoost ? 0.5 : 1;
-      
-      const updatedFruits = prev.fruits
-        .map(fruit => ({
-          ...fruit,
-          y: fruit.y + (fruit.speed * speedMultiplier),
-          rotation: fruit.rotation + 2
-        }))
-        .filter(fruit => fruit.cut || fruit.y < 700);
-      
-      const missedCorrectFruits = prev.fruits.filter(fruit => 
-        fruit.y >= 700 && !fruit.cut && fruit.isCorrect
-      );
-      
-      let newLives = prev.lives;
-      const hasShield = powerUps.some(p => p.name === 'Shield');
-      
-      if (missedCorrectFruits.length > 0) {
-        console.log('🍎 Missed fruits detected:', missedCorrectFruits.length);
-        if (!hasShield) {
-          newLives = Math.max(0, prev.lives - missedCorrectFruits.length);
-          console.log('💔 Lives decremented by game loop:', prev.lives, '->', newLives);
+    const gameLoop = setInterval(() => {
+      setGameState(prev => {
+        const hasSpeedBoost = powerUps.some(p => p.name === 'Speed Boost');
+        const speedMultiplier = hasSpeedBoost ? 0.5 : 1;
+        
+        const updatedFruits = prev.fruits
+          .map(fruit => ({
+            ...fruit,
+            y: fruit.y + (fruit.speed * speedMultiplier),
+            rotation: fruit.rotation + 2
+          }))
+          .filter(fruit => fruit.cut || fruit.y < 700);
+        
+        const missedFruits = prev.fruits.filter(fruit => 
+          fruit.y >= 700 && !fruit.cut && fruit.isCorrect
+        );
+        
+        let newLives = prev.lives;
+        const hasShield = powerUps.some(p => p.name === 'Shield');
+        
+        if (missedFruits.length > 0 && !hasShield) {
+          newLives = Math.max(0, prev.lives - missedFruits.length);
+          setCombo(0);
         }
-        setCombo(0);
-      }
-      
-      if (newLives <= 0) {
-        console.log('☠️ Game loop - No lives left, ending game');
-        setTimeout(() => {
-          if (typeof endGame === 'function') {
-            endGame(prev.score, 0, prev.timeLeft);
-          }
-        }, 100);
-      }
-      
-      return {
-        ...prev,
-        fruits: updatedFruits,
-        lives: newLives
-      };
-    });
+        
+        return {
+          ...prev,
+          fruits: updatedFruits,
+          lives: newLives
+        };
+      });
 
-    setPowerUps(prev => 
-      prev.map(powerup => ({
-        ...powerup,
-        timeLeft: Math.max(0, powerup.timeLeft - 0.05)
-      })).filter(powerup => powerup.timeLeft > 0)
-    );
-  }, 50);
+      setPowerUps(prev => 
+        prev.map(powerup => ({
+          ...powerup,
+          timeLeft: Math.max(0, powerup.timeLeft - 0.05)
+        })).filter(powerup => powerup.timeLeft > 0)
+      );
+    }, 50);
 
-  return () => {
-    console.log('🧹 Game loop cleanup');
-    clearInterval(gameLoop);
-  };
-}, [running]);
+    return () => clearInterval(gameLoop);
+  }, [powerUps, setGameState, setCombo, setPowerUps]);
 
-  useEffect(() => {
-    // Auto-start tracking when the component mounts
-    if (!running && onToggleRunning) {
-      console.log('Auto-starting tracking on game load');
-      onToggleRunning();
-    }
-  }, []);
-
-  // Game Timer
-  useEffect(() => {
-  console.log('Timer effect running:', { 
-    running, 
-    timeLeft: gameState.timeLeft, 
-    lives: gameState.lives
-  });
-  
-  if (!running || gameState.timeLeft <= 0 || gameState.lives <= 0) {
-    console.log('Timer conditions not met');
-    return;
-  }
-
-  console.log('Starting game timer...');
+  // Game timer - fixed countdown
+useEffect(() => {
   const timer = setInterval(() => {
-    console.log('Timer tick');
-    
     setGameState(prev => {
-      const newTimeLeft = prev.timeLeft - 1;
-      console.log('Timer - Decrementing:', prev.timeLeft, '->', newTimeLeft);
-      
-      if (newTimeLeft <= 0 || prev.lives <= 0) {
-        console.log('Timer - Game ending condition met');
+      if (prev.timeLeft > 1 && prev.lives > 0) {
+        // keep decrementing time
+        return { ...prev, timeLeft: prev.timeLeft - 1 };
+      } else {
+        // time runs out OR no lives left
         clearInterval(timer);
-        
-        setTimeout(() => {
-          if (typeof endGame === 'function') {
-            console.log('Timer - Calling endGame');
-            endGame(prev.score, prev.lives, 0);
-          }
-        }, 100);
-        
+        endGame(prev.score, prev.lives, 0); // force timeLeft = 0
         return { ...prev, timeLeft: 0 };
       }
-      
-      return { 
-        ...prev, 
-        timeLeft: newTimeLeft 
-      };
     });
   }, 1000);
 
+<<<<<<< Updated upstream:frontend/Math_Ninja/Frontend/src/components/GameScreen.jsx
+  setGameTimer(timer);
+  return () => clearInterval(timer);
+}, [setGameState, setGameTimer, endGame]);
+=======
   if (setGameTimer && typeof setGameTimer === 'function') {
     setGameTimer(timer);
   }
   
   return () => {
-    console.log('Timer effect cleanup');
+    console.log('Timer effect cleanup');onResults
     clearInterval(timer);
   };
 }, [running]);
+>>>>>>> Stashed changes:frontend/src/components/GameScreen.jsx
 
   // Enhanced fruit spawning with difficulty scaling
   useEffect(() => {
     const getSpawnRate = () => {
+<<<<<<< Updated upstream:frontend/Math_Ninja/Frontend/src/components/GameScreen.jsx
       const baseRate = 2000;
+      const difficultyMultiplier = difficultyLevel === 'Easy' ? 1.2 : difficultyLevel === 'Hard' ? 0.8 : 1;
+=======
+      const baseRate = 500;
       const difficultyMultiplier = difficultyLevel === 'Easy' ? 1.0 : difficultyLevel === 'Hard' ? 0.5 : 2.0;
+>>>>>>> Stashed changes:frontend/src/components/GameScreen.jsx
       const scoreMultiplier = Math.max(0.5, 1 - (gameState.score / 1000));
       return baseRate * difficultyMultiplier * scoreMultiplier;
     };
@@ -1075,8 +1747,8 @@ const fallbackPlaySound = (soundType, volume = 0.5) => {
       <div className="game-header">
         <div className="game-stats">
           <span className="stat">Score: {score}</span>
-          <span className="stat">Lives: {'❤️'.repeat(gameState.lives)}</span>
-          <span className="stat">Time: {gameState.timeLeft}s</span>
+          <span className="stat">Lives: {'❤️'.repeat(lives)}</span>
+          <span className="stat">Time: {timeLeft}s</span>
           <span className={`stat combo ${combo > 1 ? 'active' : ''}`}>
             Combo: {combo}x {combo > 1 && '🔥'}
           </span>
